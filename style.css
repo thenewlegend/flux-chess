@@ -39,10 +39,28 @@ button:hover {
   color: #94a3b8;
 }
 
-/* PORTALS */
+/* -------------------- PORTALS -------------------- */
 
 .portal {
   position: relative;
+}
+
+.portal::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+
+  /* hatch pattern */
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--portal-color) 0px,
+    var(--portal-color) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+
+  opacity: 0.35;
+  pointer-events: none;
 }
 
 .portal::after {
@@ -50,11 +68,14 @@ button:hover {
   position: absolute;
   inset: 0;
   border-radius: 4px;
+
   animation: pulse 1.5s infinite;
+  box-shadow: 0 0 10px var(--portal-color);
+  pointer-events: none;
 }
 
 @keyframes pulse {
   0% { box-shadow: 0 0 6px var(--portal-color); }
-  50% { box-shadow: 0 0 18px var(--portal-color); }
+  50% { box-shadow: 0 0 20px var(--portal-color); }
   100% { box-shadow: 0 0 6px var(--portal-color); }
 }

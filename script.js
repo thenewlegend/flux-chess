@@ -7,43 +7,53 @@ let gameActive = true;
 /* -------------------- PORTAL CONFIG -------------------- */
 
 let portalPairs = [];
+
 let swapInterval = getRandomInterval();
 let movesUntilSwap = swapInterval;
 
 const COLORS = [
-  "#22c55e", // green
-  "#3b82f6", // blue
-  "#f59e0b", // amber
-  "#ec4899", // pink
-  "#a855f7"  // purple
+  "#22c55e",
+  "#3b82f6",
+  "#f59e0b",
+  "#ec4899",
+  "#a855f7",
+  "#ef4444"
 ];
 
 function getRandomInterval() {
-  return Math.floor(Math.random() * 4) + 4; // 4–7 moves
+  return Math.floor(Math.random() * 4) + 4; // 4–7
+}
+
+/* -------------------- SQUARE HELPERS -------------------- */
+
+function getRandomSquareFromHalf(half) {
+  const files = ['a','b','c','d','e','f','g','h'];
+
+  let ranks;
+  if (half === "white") ranks = ['1','2','3','4'];
+  else ranks = ['5','6','7','8'];
+
+  return files[Math.floor(Math.random()*8)] +
+         ranks[Math.floor(Math.random()*4)];
 }
 
 /* -------------------- PORTAL GENERATION -------------------- */
 
-function getRandomSquare() {
-  const files = ['a','b','c','d','e','f','g','h'];
-  const ranks = ['1','2','3','4','5','6','7','8'];
-
-  return files[Math.floor(Math.random()*8)] +
-         ranks[Math.floor(Math.random()*8)];
-}
-
 function generatePortals() {
   portalPairs = [];
 
-  const pairCount = Math.floor(Math.random() * 2) + 2; // 2–3 pairs
+  const pairCount = 2 * (Math.floor(Math.random() * 2) + 1); 
+  // ensures EVEN: 2 or 4 pairs
 
   for (let i = 0; i < pairCount; i++) {
-    let a = getRandomSquare();
-    let b;
+    let a = getRandomSquareFromHalf("white");
+    let b = getRandomSquareFromHalf("black");
 
-    do {
-      b = getRandomSquare();
-    } while (b === a);
+    // ensure uniqueness
+    while (portalPairs.some(p => p.a === a || p.b === a || p.a === b || p.b === b)) {
+      a = getRandomSquareFromHalf("white");
+      b = getRandomSquareFromHalf("black");
+    }
 
     portalPairs.push({
       a,
@@ -56,7 +66,7 @@ function generatePortals() {
   updatePortalInfo();
 }
 
-/* -------------------- PORTAL VISUAL -------------------- */
+/* -------------------- VISUAL -------------------- */
 
 function clearPortalStyles() {
   document.querySelectorAll('.square-55d63').forEach(el => {
@@ -79,7 +89,7 @@ function highlightPortals() {
   });
 }
 
-/* -------------------- PORTAL SWAP -------------------- */
+/* -------------------- SWAP -------------------- */
 
 function applyPortalSwap() {
   let fen = game.fen();
@@ -177,7 +187,7 @@ function updateStatus() {
 
 function updatePortalInfo() {
   document.getElementById("portalInfo").innerText =
-    `Portal swap in ${movesUntilSwap} move(s) | Pairs: ${portalPairs.length}`;
+    `Swap in ${movesUntilSwap} move(s) | Pairs: ${portalPairs.length}`;
 }
 
 /* -------------------- CONTROLS -------------------- */
@@ -192,7 +202,7 @@ function restartGame() {
   swapInterval = getRandomInterval();
   movesUntilSwap = swapInterval;
 
-  generatePortals();
+  generatePortals(); // ONLY here → fixed per round
   updateStatus();
 }
 
@@ -240,7 +250,7 @@ board = Chessboard('board', {
       swapInterval = getRandomInterval();
       movesUntilSwap = swapInterval;
 
-      generatePortals();
+      // IMPORTANT: portals DO NOT regenerate
     }
 
     updateStatus();
