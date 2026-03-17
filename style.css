@@ -1,0 +1,14 @@
+body {
+  text-align: center;
+  font-family: Arial;
+  margin-top: 30px;
+}
+
+#controls {
+  margin-bottom: 10px;
+}
+
+#status {
+  margin: 10px;
+  font-weight: bold;
+}
