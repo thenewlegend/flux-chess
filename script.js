@@ -9,20 +9,7 @@ let portalB = null;
 
 let gameActive = true;
 
-function kingExists(color) {
-  const boardState = game.board();
-
-  for (let row of boardState) {
-    for (let piece of row) {
-      if (piece && piece.type === 'k' && piece.color === color) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-
+/* -------------------- RANDOM PORTALS -------------------- */
 
 function getRandomSquare() {
   const files = ['a','b','c','d','e','f','g','h'];
@@ -44,32 +31,7 @@ function generatePortals() {
   console.log("Portals:", portalA, portalB);
 }
 
-function validateAfterPortal() {
-  const whiteKing = kingExists('w');
-  const blackKing = kingExists('b');
-
-  // If a king is gone → game over immediately
-  if (!whiteKing) {
-    alert("White king captured. Black wins.");
-    gameActive = false;
-    return;
-  }
-
-  if (!blackKing) {
-    alert("Black king captured. White wins.");
-    gameActive = false;
-    return;
-  }
-
-  // If current player is in check → that's fine
-  // BUT if opponent is in check immediately after swap:
-
-  if (game.in_checkmate()) {
-    const winner = game.turn() === 'w' ? 'Black' : 'White';
-    alert("Checkmate by portal! " + winner + " wins.");
-    gameActive = false;
-  }
-}
+/* -------------------- PORTAL VISUAL -------------------- */
 
 function highlightPortals() {
   document.querySelectorAll('.square-55d63').forEach(el => {
@@ -82,24 +44,84 @@ function highlightPortals() {
   });
 }
 
+/* -------------------- SAFE PORTAL SWAP (FEN) -------------------- */
+
 function applyPortalSwap() {
-  const pieceA = game.get(portalA);
-  const pieceB = game.get(portalB);
+  let fen = game.fen();
+  let parts = fen.split(' ');
+  let boardPart = parts[0].split('/');
 
-  // Clone pieces (IMPORTANT)
-  const newA = pieceA ? { type: pieceA.type, color: pieceA.color } : null;
-  const newB = pieceB ? { type: pieceB.type, color: pieceB.color } : null;
+  function expandRow(row) {
+    return row.replace(/\d/g, d => '1'.repeat(d)).split('');
+  }
 
-  // Remove originals
-  if (pieceA) game.remove(portalA);
-  if (pieceB) game.remove(portalB);
+  function compressRow(row) {
+    return row.join('').replace(/1+/g, m => m.length);
+  }
 
-  // Place clones
-  if (newA) game.put(newA, portalB);
-  if (newB) game.put(newB, portalA);
+  let grid = boardPart.map(expandRow);
 
-  validateAfterPortal(); // if you're using it
+  function squareToCoords(square) {
+    const file = square.charCodeAt(0) - 97;
+    const rank = 8 - parseInt(square[1]);
+    return [rank, file];
+  }
+
+  const [r1, c1] = squareToCoords(portalA);
+  const [r2, c2] = squareToCoords(portalB);
+
+  // Swap pieces safely
+  let temp = grid[r1][c1];
+  grid[r1][c1] = grid[r2][c2];
+  grid[r2][c2] = temp;
+
+  let newBoard = grid.map(compressRow).join('/');
+  let newFen = [newBoard, ...parts.slice(1)].join(' ');
+
+  game.load(newFen);
+
+  validateAfterPortal();
 }
+
+/* -------------------- POST-PORTAL VALIDATION -------------------- */
+
+function kingExists(color) {
+  const boardState = game.board();
+
+  for (let row of boardState) {
+    for (let piece of row) {
+      if (piece && piece.type === 'k' && piece.color === color) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function validateAfterPortal() {
+  const whiteKing = kingExists('w');
+  const blackKing = kingExists('b');
+
+  if (!whiteKing) {
+    alert("White king lost. Black wins.");
+    gameActive = false;
+    return;
+  }
+
+  if (!blackKing) {
+    alert("Black king lost. White wins.");
+    gameActive = false;
+    return;
+  }
+
+  if (game.in_checkmate()) {
+    const winner = game.turn() === 'w' ? 'Black' : 'White';
+    alert("Checkmate via portal. " + winner + " wins.");
+    gameActive = false;
+  }
+}
+
+/* -------------------- STATUS -------------------- */
 
 function updateStatus() {
   if (!gameActive) return;
@@ -121,6 +143,8 @@ function updateStatus() {
 
   document.getElementById("status").innerText = status;
 }
+
+/* -------------------- CONTROLS -------------------- */
 
 function restartGame() {
   game.reset();
@@ -144,6 +168,8 @@ function resign() {
   gameActive = false;
 }
 
+/* -------------------- BOARD SETUP -------------------- */
+
 board = Chessboard('board', {
   draggable: true,
   position: 'start',
@@ -161,6 +187,13 @@ board = Chessboard('board', {
 
     if (move === null) return 'snapback';
 
+    // Prevent king capture (safety)
+    if (move.captured === 'k') {
+      alert("King captured. Game over.");
+      gameActive = false;
+      return;
+    }
+
     moveCount++;
 
     if (moveCount % portalInterval === 0) {
@@ -176,7 +209,9 @@ board = Chessboard('board', {
   }
 });
 
+/* -------------------- INIT -------------------- */
+
 setTimeout(() => {
   generatePortals();
   updateStatus();
-}, 3000);
+}, 100);
