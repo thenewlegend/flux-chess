@@ -1,14 +1,60 @@
 body {
   text-align: center;
-  font-family: Arial;
-  margin-top: 30px;
+  font-family: "Segoe UI", Arial;
+  margin-top: 20px;
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+h2 {
+  margin-bottom: 10px;
 }
 
 #controls {
   margin-bottom: 10px;
 }
 
+button {
+  background: #1e293b;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+  padding: 6px 12px;
+  margin: 4px;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+button:hover {
+  background: #334155;
+}
+
 #status {
   margin: 10px;
   font-weight: bold;
+}
+
+#portalInfo {
+  margin: 5px;
+  font-size: 14px;
+  color: #94a3b8;
+}
+
+/* PORTALS */
+
+.portal {
+  position: relative;
+}
+
+.portal::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 4px;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 6px var(--portal-color); }
+  50% { box-shadow: 0 0 18px var(--portal-color); }
+  100% { box-shadow: 0 0 6px var(--portal-color); }
 }
