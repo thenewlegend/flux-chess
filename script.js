@@ -187,7 +187,7 @@ function updateStatus() {
 
 function updatePortalInfo() {
   document.getElementById("portalInfo").innerText =
-    `Swap in ${movesUntilSwap} move(s) | Pairs: ${portalPairs.length}`;
+    `Swap in ${movesUntilSwap} move(s)`;
 }
 
 /* -------------------- CONTROLS -------------------- */
