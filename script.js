@@ -42,25 +42,76 @@ function getRandomSquareFromHalf(half) {
 function generatePortals() {
   portalPairs = [];
 
-  const pairCount = 2 * (Math.floor(Math.random() * 2) + 1); 
-  // ensures EVEN: 2 or 4 pairs
+  const patterns = [
+    "files",        // vertical file symmetry
+    "diagonal",     // diagonal symmetry
+    "box",          // clustered center
+    "knight",       // L-shape offsets
+    "edges"         // near edges
+  ];
 
-  for (let i = 0; i < pairCount; i++) {
-    let a = getRandomSquareFromHalf("white");
-    let b = getRandomSquareFromHalf("black");
+  const pattern = patterns[Math.floor(Math.random() * patterns.length)];
 
-    // ensure uniqueness
-    while (portalPairs.some(p => p.a === a || p.b === a || p.a === b || p.b === b)) {
-      a = getRandomSquareFromHalf("white");
-      b = getRandomSquareFromHalf("black");
+  const files = ['a','b','c','d','e','f','g','h'];
+
+  function mirrorSquare(square) {
+    const file = square[0];
+    const rank = parseInt(square[1]);
+    return file + (9 - rank); // vertical mirror
+  }
+
+  function pickUniqueWhiteSquares(generator) {
+    const squares = new Set();
+
+    while (squares.size < 4) {
+      squares.add(generator());
     }
 
+    return Array.from(squares);
+  }
+
+  let whiteSquares = [];
+
+  switch (pattern) {
+
+    case "files":
+      whiteSquares = pickUniqueWhiteSquares(() => {
+        const file = files[Math.floor(Math.random() * 8)];
+        const rank = ['2','3','4'][Math.floor(Math.random()*3)];
+        return file + rank;
+      });
+      break;
+
+    case "diagonal":
+      const diag = ['a2','b3','c4','d3','e4','f3','g2','h3'];
+      whiteSquares = diag.sort(() => 0.5 - Math.random()).slice(0,4);
+      break;
+
+    case "box":
+      const box = ['c2','d2','c3','d3','e2','f2','e3','f3'];
+      whiteSquares = box.sort(() => 0.5 - Math.random()).slice(0,4);
+      break;
+
+    case "knight":
+      const knightBase = ['b2','g2','c3','f3','d2','e2'];
+      whiteSquares = knightBase.sort(() => 0.5 - Math.random()).slice(0,4);
+      break;
+
+    case "edges":
+      const edges = ['a2','h2','a3','h3','b2','g2'];
+      whiteSquares = edges.sort(() => 0.5 - Math.random()).slice(0,4);
+      break;
+  }
+
+  whiteSquares.forEach((sq, i) => {
+    const mirrored = mirrorSquare(sq);
+
     portalPairs.push({
-      a,
-      b,
+      a: sq,
+      b: mirrored,
       color: COLORS[i % COLORS.length]
     });
-  }
+  });
 
   highlightPortals();
   updatePortalInfo();
