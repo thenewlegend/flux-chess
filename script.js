@@ -21,7 +21,7 @@ const COLORS = [
 ];
 
 function getRandomInterval() {
-  return Math.floor(Math.random() * 4) + 4; // 4–7
+  return Math.floor(Math.random() * 4) + 2;
 }
 
 /* -------------------- SQUARE HELPERS -------------------- */
