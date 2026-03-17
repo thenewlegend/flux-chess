@@ -14,10 +14,10 @@ let movesUntilSwap = swapInterval;
 const COLORS = [
   "#22c55e",
   "#3b82f6",
-  "#f59e0b",
-  "#ec4899",
+  "#0c0051",
+  "#00ffff",
   "#a855f7",
-  "#ef4444"
+  "#960180"
 ];
 
 function getRandomInterval() {
