@@ -43,31 +43,45 @@ function generatePortals() {
   portalPairs = [];
 
   const patterns = [
-    "files",        // vertical file symmetry
-    "diagonal",     // diagonal symmetry
-    "box",          // clustered center
-    "knight",       // L-shape offsets
-    "edges"         // near edges
+    "files",
+    "diagonal",
+    "box",
+    "knight",
+    "edges",
+    "center_cross",
+    "wide_spread",
+    "zigzag",
+    "triangle",
+    "random_balanced"
   ];
 
   const pattern = patterns[Math.floor(Math.random() * patterns.length)];
 
   const files = ['a','b','c','d','e','f','g','h'];
+  const allowedRanks = ['3','4'];
 
   function mirrorSquare(square) {
     const file = square[0];
     const rank = parseInt(square[1]);
-    return file + (9 - rank); // vertical mirror
+    return file + (9 - rank);
   }
 
-  function pickUniqueWhiteSquares(generator) {
-    const squares = new Set();
+  function randomSquare() {
+    const file = files[Math.floor(Math.random() * 8)];
+    const rank = allowedRanks[Math.floor(Math.random() * allowedRanks.length)];
+    return file + rank;
+  }
 
-    while (squares.size < 4) {
-      squares.add(generator());
+  function pickUnique(list) {
+    return list.sort(() => 0.5 - Math.random()).slice(0, 3);
+  }
+
+  function pickGenerated() {
+    const set = new Set();
+    while (set.size < 3) {
+      set.add(randomSquare());
     }
-
-    return Array.from(squares);
+    return Array.from(set);
   }
 
   let whiteSquares = [];
@@ -75,40 +89,57 @@ function generatePortals() {
   switch (pattern) {
 
     case "files":
-      whiteSquares = pickUniqueWhiteSquares(() => {
-        const file = files[Math.floor(Math.random() * 8)];
-        const rank = ['2','3','4'][Math.floor(Math.random()*3)];
-        return file + rank;
-      });
+      whiteSquares = pickGenerated();
       break;
 
     case "diagonal":
-      const diag = ['a2','b3','c4','d3','e4','f3','g2','h3'];
-      whiteSquares = diag.sort(() => 0.5 - Math.random()).slice(0,4);
+      whiteSquares = pickUnique(['a3','b4','c3','d4','e3','f4','g3','h4']);
       break;
 
     case "box":
-      const box = ['c2','d2','c3','d3','e2','f2','e3','f3'];
-      whiteSquares = box.sort(() => 0.5 - Math.random()).slice(0,4);
+      whiteSquares = pickUnique(['c3','d3','e3','f3','c4','d4','e4','f4']);
       break;
 
     case "knight":
-      const knightBase = ['b2','g2','c3','f3','d2','e2'];
-      whiteSquares = knightBase.sort(() => 0.5 - Math.random()).slice(0,4);
+      whiteSquares = pickUnique(['b3','g3','c4','f4','d3','e3']);
       break;
 
     case "edges":
-      const edges = ['a2','h2','a3','h3','b2','g2'];
-      whiteSquares = edges.sort(() => 0.5 - Math.random()).slice(0,4);
+      whiteSquares = pickUnique(['a3','h3','a4','h4','b3','g3']);
+      break;
+
+    case "center_cross":
+      whiteSquares = pickUnique(['d3','e3','d4','e4']);
+      break;
+
+    case "wide_spread":
+      whiteSquares = pickUnique(['a3','d4','h3','b4','g4']);
+      break;
+
+    case "zigzag":
+      whiteSquares = pickUnique(['a3','c4','e3','g4','h3']);
+      break;
+
+    case "triangle":
+      whiteSquares = pickUnique(['c3','e3','d4','b3','f3']);
+      break;
+
+    case "random_balanced":
+      // ensures spacing (no clustering)
+      const candidates = ['a3','b4','c3','d4','e3','f4','g3','h4'];
+      while (whiteSquares.length < 3) {
+        let pick = candidates[Math.floor(Math.random()*candidates.length)];
+        if (!whiteSquares.some(s => Math.abs(s.charCodeAt(0) - pick.charCodeAt(0)) <= 1)) {
+          whiteSquares.push(pick);
+        }
+      }
       break;
   }
 
   whiteSquares.forEach((sq, i) => {
-    const mirrored = mirrorSquare(sq);
-
     portalPairs.push({
       a: sq,
-      b: mirrored,
+      b: mirrorSquare(sq),
       color: COLORS[i % COLORS.length]
     });
   });
