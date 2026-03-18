@@ -13,6 +13,7 @@ let currentRoom = null;
 let roomChannel = null;
 let myRole = 'local'; // 'local', 'host', 'guest', 'spectator'
 let hostColor = 'w';  // which color the HOST plays; swaps each round
+let isRestoring = false;
 
 /* -------------------- UI & THEMING -------------------- */
 
@@ -182,6 +183,7 @@ function dismissLobby() {
 
 function startLocalGame() {
   myRole = 'local';
+  isRestoring = false;
   dismissLobby();
 }
 
@@ -213,6 +215,7 @@ async function createRoom() {
   $('#createdRoomCode').text(currentRoom);
   $('#copy-code-container').removeClass('hidden');
   $('#waitingMessage').removeClass('hidden');
+  isRestoring = false;
   initRoomChannel(currentRoom, true);
 }
 
@@ -250,11 +253,13 @@ async function joinRoomAsGuest() {
   }
 
   currentRoom = code;
+  isRestoring = false;
   initRoomChannel(currentRoom, false);
 }
 
 function initRoomChannel(roomCode, isHost) {
   myRole = isHost ? 'host' : 'guest';
+  saveSession();
   updateOnlineStatus();
 
   roomChannel = supabaseClient.channel(`room_${roomCode}`, {
@@ -278,7 +283,7 @@ function initRoomChannel(roomCode, isHost) {
     if (isHost && users.length >= 2) {
       $('#waitingMessage').text('Players joined! Starting...');
       setTimeout(dismissLobby, 1000);
-      broadcastState();
+      if (!isRestoring) broadcastState();
     } else if (!isHost && myRole !== 'local') {
       setTimeout(dismissLobby, 500);
       // Wait a bit for subscription to stabilize then request state
@@ -294,8 +299,17 @@ function initRoomChannel(roomCode, isHost) {
     if (isHost) setTimeout(broadcastState, 150);
   });
 
-  roomChannel.on('broadcast', { event: 'request_sync' }, () => {
-    if (isHost) broadcastState();
+  roomChannel.on('broadcast', { event: 'request_sync' }, (p) => {
+    const requesterRole = p.payload ? p.payload.role : null;
+    
+    // Host always responds to sync requests
+    if (myRole === 'host') {
+       broadcastState();
+    } 
+    // Guest responds only if the host is the one requesting (e.g. host reloaded)
+    else if (myRole === 'guest' && requesterRole === 'host') {
+       broadcastState();
+    }
   });
 
   roomChannel.on('broadcast', { event: 'sync_state' }, (p) => {
@@ -318,7 +332,8 @@ function initRoomChannel(roomCode, isHost) {
     if (data.gameActive === false) {
       gameActive = false;
       setStatus(data.statusText || "Game Over");
-      if (!popupShown) {
+      // Guest should NOT see the restart popup
+      if (!popupShown && (myRole === 'host' || myRole === 'local')) {
         popupShown = true;
         setTimeout(showRestartPopup, 400);
       }
@@ -327,6 +342,8 @@ function initRoomChannel(roomCode, isHost) {
       updateStatus(true); // pass true to suppress vibration during sync
     }
     updatePortalInfo();
+    isRestoring = false;
+    // No longer saving full state here, as we want a fresh start on restore
   });
 
   roomChannel.on('broadcast', { event: 'resign' }, (p) => {
@@ -341,17 +358,23 @@ function initRoomChannel(roomCode, isHost) {
     popupShown = false;
     swapInterval = getRandomInterval();
     movesUntilSwap = swapInterval;
+    saveSession();
   });
 
   roomChannel.subscribe(async (status) => {
     if (status === 'SUBSCRIBED') {
       await roomChannel.track({ role: myRole, joined_at: new Date().toISOString() });
+      
+      // If we are restoring a session, ask for the current state as soon as we connect
+      if (isRestoring) {
+         roomChannel.send({ type: 'broadcast', event: 'request_sync', payload: { role: myRole } });
+      }
     }
   });
 }
 
 function broadcastState() {
-  if (!roomChannel || myRole !== 'host') return;
+  if (!roomChannel) return;
   roomChannel.send({
     type: 'broadcast',
     event: 'sync_state',
@@ -492,24 +515,25 @@ function showRestartPopup() {
   const isGuest = myRole === 'guest' || myRole === 'spectator';
 
   // Adjust popup content based on role
-  popup.querySelector('p').textContent = isGuest ? 'The game has ended.' : 'Restart now?';
-  popup.classList.remove("hidden");
-
-  // Only host or local can see restart buttons
-  if (myRole === 'host' || myRole === 'local') {
-    $('#confirmRestartBtn').removeClass('hidden');
-    $('#restartPopupNo').removeClass('hidden');
-    $('#restartPopupClose').addClass('hidden');
-    // Auto restart after 5 mins
-    restartTimer = setTimeout(() => {
-      restartGame();
-      closePopup();
-    }, 60000 * 5);
-  } else {
+  if (isGuest) {
+    popup.querySelector('p').textContent = 'Game Over. Waiting for host to restart...';
     $('#confirmRestartBtn').addClass('hidden');
     $('#restartPopupNo').addClass('hidden');
-    $('#restartPopupClose').removeClass('hidden');
+    $('#restartPopupClose').addClass('hidden');
+  } else {
+    popup.querySelector('p').textContent = 'Restart now?';
+    $('#confirmRestartBtn').removeClass('hidden');
+    $('#restartPopupNo').removeClass('hidden');
+    $('#restartPopupClose').addClass('hidden'); // Close only via session end/restart
+    
+    // Auto restart after 5 mins
+    if (restartTimer) clearTimeout(restartTimer);
+    restartTimer = setTimeout(() => {
+      confirmRestart();
+    }, 60000 * 5);
   }
+  
+  popup.classList.remove("hidden");
 }
 
 function closePopup() {
@@ -537,7 +561,7 @@ function endGame(message) {
     broadcastState();
   }
 
-  if (!popupShown) {
+  if (!popupShown && (myRole === 'host' || myRole === 'local')) {
     popupShown = true;
     setTimeout(showRestartPopup, 400);
   }
@@ -796,7 +820,11 @@ function restartGame() {
 
   if (myRole === 'host' && roomChannel) {
     roomChannel.send({ type: 'broadcast', event: 'restart', payload: {} });
-    broadcastState();
+    // Small delay ensures guest finishes their local reset before receiving the host's full state
+    setTimeout(() => {
+      broadcastState();
+      saveSession();
+    }, 100);
   }
 }
 
@@ -901,9 +929,82 @@ board = Chessboard('board', {
   }
 });
 
+/* -------------------- SESSION RESTORE -------------------- */
+function saveSession() {
+  if (currentRoom && myRole !== 'local') {
+    localStorage.setItem('flux-room', currentRoom);
+    localStorage.setItem('flux-role', myRole);
+    localStorage.setItem('flux-hostColor', hostColor);
+  }
+}
+
+function clearSession() {
+  localStorage.removeItem('flux-room');
+  localStorage.removeItem('flux-role');
+  $('#restore-session-section').addClass('hidden');
+}
+
+function checkRestoreSession() {
+  const storedRoom = localStorage.getItem('flux-room');
+  const storedRole = localStorage.getItem('flux-role');
+  
+  if (storedRoom && storedRoom !== 'null' && storedRoom !== 'undefined' && 
+      storedRole && storedRole !== 'null' && storedRole !== 'undefined') {
+    $('#restore-text').text(`You were previously in room: ${storedRoom}`);
+    $('#restore-session-section').removeClass('hidden');
+  } else {
+    $('#restore-session-section').addClass('hidden');
+  }
+}
+
+function restoreSession() {
+  const storedRoom = localStorage.getItem('flux-room');
+  const storedRole = localStorage.getItem('flux-role');
+  if (storedRoom && storedRole) {
+    currentRoom = storedRoom;
+    myRole = storedRole;
+    isRestoring = true;
+    
+    // Safety timeout: if no one responds to sync request, stop waiting
+    setTimeout(() => { isRestoring = false; }, 3000);
+    
+    // Reset to a fresh game state locally, will be overwritten by sync_state if successful
+    game.reset();
+    moveCount = 0;
+    gameActive = true;
+    popupShown = false;
+    portalPairs = [];
+    movesUntilSwap = getRandomInterval();
+    
+    const storedHostColor = localStorage.getItem('flux-hostColor');
+    if (storedHostColor) hostColor = storedHostColor;
+
+    // Update board to start position immediately
+    board.position('start');
+    highlightPortals();
+    updatePortalInfo();
+    updateStatus(true);
+    orientBoardForRole();
+    updateOnlineStatus();
+
+    // Joining the channel will trigger the sync request via the SUBSCRIBED callback
+    initRoomChannel(currentRoom, myRole === 'host');
+    
+    setTimeout(dismissLobby, 100);
+  }
+}
+
+function forgetSession() {
+  localStorage.removeItem('flux-room');
+  localStorage.removeItem('flux-role');
+  $('#restore-session-section').addClass('hidden');
+  console.log("Session forgotten.");
+}
+
 /* -------------------- INIT -------------------- */
 setTimeout(() => {
   generatePortals();
   updateStatus();
   updatePortalInfo();
+  checkRestoreSession();
 }, 100);
