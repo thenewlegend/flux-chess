@@ -169,7 +169,7 @@
         <div class="lobby-divider">OR</div>
 
         <div class="lobby-section">
-          <h3>Join as Guest</h3>
+          <h3>Join using room code</h3>
           <input type="text" id="joinRoomCode" placeholder="Enter Room Code" class="lobby-input text-center"
             style="text-transform: uppercase;">
           <button class="btn tonal main-btn" id="joinBtn" onclick="joinRoomAsGuest()">Join Game</button>
@@ -184,7 +184,7 @@
         <div class="lobby-section">
           <h2 id="role-room-id" style="margin-bottom: 4px;">Room: -</h2>
           <p class="secondary-text" style="margin-bottom: 24px;">Select your role to enter the match</p>
-          
+
           <div class="role-grid">
             <button id="join-as-host-btn" class="role-card host" onclick="joinWithRole('host')">
               <span class="material-symbols-rounded">person</span>
@@ -211,7 +211,7 @@
             </button>
           </div>
         </div>
-        
+
         <div style="margin-top: 32px; width: 100%;">
           <button class="btn text-btn back-btn" onclick="backToOnlineLobby()">
             <span class="material-symbols-rounded">arrow_back</span> Back to Lobby
