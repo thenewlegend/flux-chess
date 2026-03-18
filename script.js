@@ -204,7 +204,6 @@ function generateRoomCode() {
 async function createRoom() {
   if (!supabaseClient) return alert("Supabase JS not loaded.");
 
-  // Try anonymous login but don't let it block room creation
   try {
     await supabaseClient.auth.signInAnonymously();
   } catch (e) {
@@ -212,6 +211,28 @@ async function createRoom() {
   }
 
   currentRoom = generateRoomCode();
+
+  // Initial state for the DB
+  const initialState = {
+    fen: game.fen(),
+    moveCount,
+    movesUntilSwap,
+    portalPairs,
+    hostColor,
+    gameActive: true,
+    statusText: "White to move."
+  };
+
+  // Persist room in DB
+  const { error } = await supabaseClient.from('rooms').insert([
+    { code: currentRoom, game_state: initialState }
+  ]);
+
+  if (error) {
+    console.error("Error creating room in DB:", error);
+    return alert("Failed to create room in database.");
+  }
+
   $('#createdRoomCode').text(currentRoom);
   $('#copy-code-container').removeClass('hidden');
   $('#waitingMessage').removeClass('hidden');
@@ -252,8 +273,24 @@ async function joinRoomAsGuest() {
     console.warn("Auth skipped/failed:", e);
   }
 
+  // Fetch state from DB first
+  const { data, error } = await supabaseClient
+    .from('rooms')
+    .select('game_state')
+    .eq('code', code)
+    .single();
+
+  if (error || !data) {
+    $('#joinBtn').text('Join Game');
+    return $('#joinError').text('Room not found.').removeClass('hidden');
+  }
+
   currentRoom = code;
   isRestoring = false;
+
+  // Apply fetched state immediately
+  applySyncedState(data.game_state);
+
   initRoomChannel(currentRoom, false);
 }
 
@@ -265,6 +302,18 @@ function initRoomChannel(roomCode, isHost) {
   roomChannel = supabaseClient.channel(`room_${roomCode}`, {
     config: { presence: { key: myRole } }
   });
+
+  // Listen for DB changes instead of Broadcast for state sync
+  roomChannel.on(
+    'postgres_changes',
+    { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `code=eq.${roomCode}` },
+    (payload) => {
+      console.log("DB Update received:", payload.new);
+      if (payload.new && payload.new.game_state) {
+        applySyncedState(payload.new.game_state);
+      }
+    }
+  );
 
   roomChannel.on('presence', { event: 'sync' }, () => {
     const state = roomChannel.presenceState();
@@ -286,71 +335,13 @@ function initRoomChannel(roomCode, isHost) {
       if (!isRestoring) broadcastState();
     } else if (!isHost && myRole !== 'local') {
       setTimeout(dismissLobby, 500);
-      // Wait a bit for subscription to stabilize then request state
-      setTimeout(() => {
-        roomChannel.send({ type: 'broadcast', event: 'request_sync', payload: {} });
-      }, 1500);
     }
   });
 
   roomChannel.on('broadcast', { event: 'move' }, (payload) => {
     applyRemoteMove(payload.payload.source, payload.payload.target);
-    // If guest moved, host follow up with state to confirm swap logic
+    // If guest moved, host follow up with state to confirm swap logic in DB
     if (isHost) setTimeout(broadcastState, 150);
-  });
-
-  roomChannel.on('broadcast', { event: 'request_sync' }, (p) => {
-    const requesterRole = p.payload ? p.payload.role : null;
-
-    // Host always responds to sync requests
-    if (myRole === 'host') {
-      broadcastState();
-    }
-    // Guest responds only if the host is the one requesting (e.g. host reloaded)
-    else if (myRole === 'guest' && requesterRole === 'host') {
-      broadcastState();
-    }
-  });
-
-  roomChannel.on('broadcast', { event: 'sync_state' }, (p) => {
-    const data = p.payload;
-    console.log("Receiving sync_state", data);
-    
-    // Safety: ensure we process hostColor first to keep sides consistent
-    if (data.hostColor !== undefined) {
-       console.log(`Syncing hostColor: ${hostColor} -> ${data.hostColor}`);
-       hostColor = data.hostColor;
-       orientBoardForRole();
-    }
-
-    game.load(data.fen);
-    moveCount = data.moveCount;
-    movesUntilSwap = data.movesUntilSwap;
-    portalPairs = data.portalPairs;
-    board.position(game.fen());
-
-    // Ensure portals highlight, sometimes board.position needs a tiny tick to finish DOM
-    setTimeout(highlightPortals, 50);
-
-    // Orient board so local player always sees their color at the bottom
-    orientBoardForRole();
-    updatePlayerBadges();
-
-    if (data.gameActive === false) {
-      gameActive = false;
-      setStatus(data.statusText || "Game Over");
-      // Guest should NOT see the restart popup
-      if (!popupShown && (myRole === 'host' || myRole === 'local')) {
-        popupShown = true;
-        setTimeout(showRestartPopup, 400);
-      }
-    } else {
-      gameActive = true;
-      updateStatus(true); // pass true to suppress vibration during sync
-    }
-    updatePortalInfo();
-    isRestoring = false;
-    // No longer saving full state here, as we want a fresh start on restore
   });
 
   roomChannel.on('broadcast', { event: 'resign' }, (p) => {
@@ -358,7 +349,6 @@ function initRoomChannel(roomCode, isHost) {
   });
 
   roomChannel.on('broadcast', { event: 'restart' }, () => {
-    // Guest receives hostColor with the following sync_state; just reset local state
     game.reset();
     moveCount = 0;
     gameActive = true;
@@ -371,30 +361,72 @@ function initRoomChannel(roomCode, isHost) {
   roomChannel.subscribe(async (status) => {
     if (status === 'SUBSCRIBED') {
       await roomChannel.track({ role: myRole, joined_at: new Date().toISOString() });
-
-      // If we are restoring a session, ask for the current state as soon as we connect
-      if (isRestoring) {
-        roomChannel.send({ type: 'broadcast', event: 'request_sync', payload: { role: myRole } });
-      }
     }
   });
 }
 
-function broadcastState() {
-  if (!roomChannel) return;
-  roomChannel.send({
-    type: 'broadcast',
-    event: 'sync_state',
-    payload: {
-      fen: game.fen(),
-      moveCount,
-      movesUntilSwap,
-      portalPairs,
-      hostColor,
-      gameActive,
-      statusText: document.getElementById("status").innerText
+function applySyncedState(data) {
+  console.log("Applying synced state", data);
+
+  // Safety: ensure we process hostColor first to keep sides consistent
+  if (data.hostColor !== undefined) {
+    hostColor = data.hostColor;
+    orientBoardForRole();
+  }
+
+  game.load(data.fen);
+  moveCount = data.moveCount;
+  movesUntilSwap = data.movesUntilSwap;
+  portalPairs = data.portalPairs;
+  board.position(game.fen());
+
+  // Ensure portals highlight
+  setTimeout(highlightPortals, 50);
+
+  // Orient board
+  orientBoardForRole();
+  updatePlayerBadges();
+
+  if (data.gameActive === false) {
+    gameActive = false;
+    setStatus(data.statusText || "Game Over");
+    if (!popupShown && (myRole === 'host' || myRole === 'local')) {
+      popupShown = true;
+      setTimeout(showRestartPopup, 400);
     }
-  });
+  } else {
+    gameActive = true;
+    updateStatus(true);
+  }
+  updatePortalInfo();
+  isRestoring = false;
+}
+
+async function broadcastState() {
+  if (!supabaseClient || !currentRoom) return;
+
+  const state = {
+    fen: game.fen(),
+    moveCount,
+    movesUntilSwap,
+    portalPairs,
+    hostColor,
+    gameActive,
+    statusText: document.getElementById("status").innerText
+  };
+
+  // Update DB state
+  const { error } = await supabaseClient
+    .from('rooms')
+    .update({ 
+      game_state: state,
+      last_updated: new Date().toISOString() 
+    })
+    .eq('code', currentRoom);
+
+  if (error) {
+    console.error("Error updating DB state:", error);
+  }
 }
 
 function updateOnlineStatus() {
@@ -974,7 +1006,7 @@ function checkRestoreSession() {
   }
 }
 
-function restoreSession() {
+async function restoreSession() {
   const storedRoom = localStorage.getItem('flux-room');
   const storedRole = localStorage.getItem('flux-role');
   if (storedRoom && storedRole) {
@@ -982,31 +1014,25 @@ function restoreSession() {
     myRole = storedRole;
     isRestoring = true;
 
-    // Safety timeout: if no one responds to sync request, stop waiting
-    setTimeout(() => { isRestoring = false; }, 3000);
+    // Fetch latest state from DB
+    const { data, error } = await supabaseClient
+      .from('rooms')
+      .select('game_state')
+      .eq('code', currentRoom)
+      .single();
 
-    // Reset to a fresh game state locally, will be overwritten by sync_state if successful
-    game.reset();
-    moveCount = 0;
-    gameActive = true;
-    popupShown = false;
-    portalPairs = [];
-    movesUntilSwap = getRandomInterval();
+    if (!error && data) {
+      applySyncedState(data.game_state);
+    } else {
+      console.warn("Could not restore session from DB:", error);
+      isRestoring = false;
+      return;
+    }
 
     const storedHostColor = localStorage.getItem('flux-hostColor');
     if (storedHostColor) hostColor = storedHostColor;
 
-    // Update board to start position immediately
-    board.position('start');
-    highlightPortals();
-    updatePortalInfo();
-    updateStatus(true);
-    orientBoardForRole();
-    updateOnlineStatus();
-
-    // Joining the channel will trigger the sync request via the SUBSCRIBED callback
     initRoomChannel(currentRoom, myRole === 'host');
-
     setTimeout(dismissLobby, 100);
   }
 }
