@@ -44,7 +44,8 @@
       <div class="card status-card">
         <div id="status">Ready to play.</div>
         <div id="portalInfo" class="secondary-text">Swap in - move(s)</div>
-        <div id="onlineStatus" class="secondary-text hidden" style="margin-top: 12px; font-size: 0.9rem; color: var(--md-sys-color-primary);"></div>
+        <div id="onlineStatus" class="secondary-text hidden"
+          style="margin-top: 12px; font-size: 0.9rem; color: var(--md-sys-color-primary);"></div>
       </div>
 
       <div class="card controls-card">
@@ -62,20 +63,24 @@
 
     <div class="board-wrapper">
       <!-- Player badges: shown in multiplayer only -->
-      <div id="player-badges" class="player-badges hidden">
-        <div class="player-badge" id="badge-top">
+      <div class="player-badge-container top">
+        <div id="badge-top" class="player-badge hidden">
           <span class="badge-piece" id="badge-top-piece">♚</span>
           <span class="badge-label" id="badge-top-label">GUEST</span>
           <span class="badge-you hidden" id="badge-top-you">YOU</span>
         </div>
-        <div class="player-badge" id="badge-bottom">
+      </div>
+
+      <div class="board-container">
+        <div id="board"></div>
+      </div>
+
+      <div class="player-badge-container bottom">
+        <div id="badge-bottom" class="player-badge hidden">
           <span class="badge-piece" id="badge-bottom-piece">♔</span>
           <span class="badge-label" id="badge-bottom-label">HOST</span>
           <span class="badge-you hidden" id="badge-bottom-you">YOU</span>
         </div>
-      </div>
-      <div class="board-container">
-        <div id="board"></div>
       </div>
     </div>
   </main>
@@ -137,24 +142,28 @@
         <div class="lobby-section">
           <h3>Host a Game</h3>
           <button class="btn filled main-btn" onclick="createRoom()">Generate Room Code</button>
-          <div id="copy-code-container" class="hidden" style="margin-top: 16px; width: 100%; display: flex; align-items: center; gap: 8px;">
+          <div id="copy-code-container" class="hidden"
+            style="margin-top: 16px; width: 100%; display: flex; align-items: center; gap: 8px;">
             <div id="createdRoomCode" class="room-code-display" style="flex-grow: 1; margin: 0;"></div>
-            <button class="icon-button tonal" onclick="copyRoomCode()" title="Copy Code" style="height: 48px; width: 48px; border-radius: 12px; background: var(--md-sys-color-secondary-container);">
+            <button class="icon-button tonal" onclick="copyRoomCode()" title="Copy Code"
+              style="height: 48px; width: 48px; border-radius: 12px; background: var(--md-sys-color-secondary-container);">
               <span class="material-symbols-rounded">content_copy</span>
             </button>
           </div>
-          <p id="waitingMessage" class="secondary-text hidden" style="animation: softPulse 2s infinite;">Waiting for guest to join...</p>
+          <p id="waitingMessage" class="secondary-text hidden" style="animation: softPulse 2s infinite;">Waiting for
+            guest to join...</p>
         </div>
 
         <div class="lobby-divider">OR</div>
 
         <div class="lobby-section">
           <h3>Join as Guest</h3>
-          <input type="text" id="joinRoomCode" placeholder="Enter Room Code" class="lobby-input text-center" style="text-transform: uppercase;">
+          <input type="text" id="joinRoomCode" placeholder="Enter Room Code" class="lobby-input text-center"
+            style="text-transform: uppercase;">
           <button class="btn tonal main-btn" id="joinBtn" onclick="joinRoomAsGuest()">Join Game</button>
           <p id="joinError" class="error-text hidden" style="color: #ef4444; font-size: 0.85rem; margin-top: 8px;"></p>
         </div>
-        
+
         <button class="btn text-btn back-btn" onclick="backToMain()">← Back</button>
       </div>
     </div>

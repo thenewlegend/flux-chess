@@ -282,44 +282,49 @@ body::after {
 }
 
 /* -------------------- PLAYER BADGES -------------------- */
-.player-badges {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+.player-badge-container {
   width: min(90vw, 500px);
+  display: flex;
+  justify-content: center;
 }
 
-.player-badges.hidden {
-  display: none;
+.player-badge-container.top {
+  margin-bottom: 8px;
+}
+
+.player-badge-container.bottom {
+  margin-top: 8px;
 }
 
 .player-badge {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 10px;
-  padding: 6px 12px;
+  padding: 6px 16px;
   background: var(--md-sys-color-surface);
-  border-radius: 10px;
+  border-radius: 20px;
   border: 1px solid var(--md-sys-color-outline);
   font-size: 0.85rem;
   font-weight: 500;
   color: var(--md-sys-color-on-surface-variant);
-  transition: background-color 0.3s;
+  transition: all 0.3s ease;
+  min-width: 140px;
+  box-shadow: var(--md-elevation-1);
 }
 
-/* Top badge = opponent (sits above the board) */
+.player-badge.hidden {
+  display: none;
+}
+
 #badge-top {
-  border-radius: 10px 10px 4px 4px;
-  opacity: 0.75;
+  opacity: 0.85;
 }
 
-/* Bottom badge = you (sits below the board) */
 #badge-bottom {
-  border-radius: 4px 4px 10px 10px;
-  opacity: 1;
   background: var(--md-sys-color-secondary-container);
   color: var(--md-sys-color-on-secondary-container);
   border-color: var(--md-sys-color-primary);
+  opacity: 1;
 }
 
 .badge-piece {

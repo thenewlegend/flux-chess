@@ -355,7 +355,7 @@ function broadcastState() {
 function updateOnlineStatus() {
   if (myRole === 'local') {
     $('#restartBtn').removeClass('hidden');
-    $('#player-badges').addClass('hidden');
+    $('.player-badge').addClass('hidden');
     updateResignButtonState();
     return;
   }
@@ -368,7 +368,7 @@ function updateOnlineStatus() {
     $('#restartBtn').addClass('hidden');
   }
 
-  $('#player-badges').removeClass('hidden');
+  $('.player-badge').removeClass('hidden');
   updatePlayerBadges();
   updateResignButtonState();
 }
@@ -698,14 +698,12 @@ function updateResignButtonState() {
 
 /* -------------------- PLAYER BADGES -------------------- */
 function updatePlayerBadges() {
-  if (myRole === 'local') return;
+  if (myRole === 'local') {
+    $('.player-badge').addClass('hidden');
+    return;
+  }
 
   const isHostWhite = (hostColor === 'w');
-  // From our perspective: bottom = my color, top = opponent's color
-  const myColor = getMyColor();
-  const myIsWhite = (myColor === 'w');
-
-  // Determine board orientation: who is at bottom
   const orientation = board.orientation(); // 'white' or 'black'
   const bottomIsWhite = (orientation === 'white');
 
@@ -724,11 +722,13 @@ function updatePlayerBadges() {
   $('#badge-bottom-piece').text(bottomPiece)
     .css('color', bottomIsWhite ? '#f0d9b5' : '#2d2d2d');
   bottomIsMe ? $('#badge-bottom-you').removeClass('hidden') : $('#badge-bottom-you').addClass('hidden');
+  $('#badge-bottom').removeClass('hidden');
 
   $('#badge-top-label').text(topLabel);
   $('#badge-top-piece').text(topPiece)
     .css('color', bottomIsWhite ? '#2d2d2d' : '#f0d9b5');
   topIsMe ? $('#badge-top-you').removeClass('hidden') : $('#badge-top-you').addClass('hidden');
+  $('#badge-top').removeClass('hidden');
 }
 
 /* -------------------- FLIP BOARD -------------------- */
