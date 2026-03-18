@@ -12,6 +12,7 @@ const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_U
 let currentRoom = null;
 let roomChannel = null;
 let myRole = 'local'; // 'local', 'host', 'guest', 'spectator'
+let hostColor = 'w';  // which color the HOST plays; swaps each round
 
 /* -------------------- UI & THEMING -------------------- */
 
@@ -292,8 +293,12 @@ function initRoomChannel(roomCode, isHost) {
     moveCount = data.moveCount;
     movesUntilSwap = data.movesUntilSwap;
     portalPairs = data.portalPairs;
+    if (data.hostColor !== undefined) hostColor = data.hostColor;
     board.position(game.fen());
     highlightPortals();
+    // Orient board so local player always sees their color at the bottom
+    orientBoardForRole();
+    updatePlayerBadges();
 
     if (data.gameActive === false) {
       gameActive = false;
@@ -314,7 +319,13 @@ function initRoomChannel(roomCode, isHost) {
   });
 
   roomChannel.on('broadcast', { event: 'restart' }, () => {
-    restartGame();
+    // Guest receives hostColor with the following sync_state; just reset local state
+    game.reset();
+    moveCount = 0;
+    gameActive = true;
+    popupShown = false;
+    swapInterval = getRandomInterval();
+    movesUntilSwap = swapInterval;
   });
 
   roomChannel.subscribe(async (status) => {
@@ -334,6 +345,7 @@ function broadcastState() {
       moveCount,
       movesUntilSwap,
       portalPairs,
+      hostColor,
       gameActive,
       statusText: document.getElementById("status").innerText
     }
@@ -343,10 +355,11 @@ function broadcastState() {
 function updateOnlineStatus() {
   if (myRole === 'local') {
     $('#restartBtn').removeClass('hidden');
+    $('#player-badges').addClass('hidden');
     updateResignButtonState();
     return;
   }
-  
+
   $('#onlineStatus').text(`Room: ${currentRoom} | Role: ${myRole.toUpperCase()}`).removeClass('hidden');
 
   if (myRole === 'host') {
@@ -354,6 +367,9 @@ function updateOnlineStatus() {
   } else {
     $('#restartBtn').addClass('hidden');
   }
+
+  $('#player-badges').removeClass('hidden');
+  updatePlayerBadges();
   updateResignButtonState();
 }
 
@@ -425,8 +441,8 @@ $('#board').on('click', '.square-55d63', function () {
     if (isMoveValid) {
       // Prevent local click move if spectator, or wrong turn in multiplayer
       if (myRole === 'spectator') return;
-      if (myRole === 'host' && game.turn() === 'b') return;
-      if (myRole === 'guest' && game.turn() === 'w') return;
+      const myColor = getMyColor();
+      if (myColor && game.turn() !== myColor) return;
 
       const moved = processMove(selectedSquare, square);
       if (moved) {
@@ -638,7 +654,7 @@ function updateStatus() {
     setStatus(`${moveColor} is in check.`);
     updateResignButtonState();
     if (myRole !== 'local') {
-      const isMyTurn = (myRole === 'host' && game.turn() === 'w') || (myRole === 'guest' && game.turn() === 'b');
+      const isMyTurn = game.turn() === getMyColor();
       if (statusCard) statusCard.classList.toggle('my-turn', isMyTurn);
       if (isMyTurn) showToast('You are in check!');
     }
@@ -646,7 +662,7 @@ function updateStatus() {
     setStatus(`${moveColor} to move.`);
     updateResignButtonState();
     if (myRole !== 'local') {
-      const isMyTurn = (myRole === 'host' && game.turn() === 'w') || (myRole === 'guest' && game.turn() === 'b');
+      const isMyTurn = game.turn() === getMyColor();
       if (statusCard) statusCard.classList.toggle('my-turn', isMyTurn);
       if (isMyTurn) showToast('Your turn');
     }
@@ -655,6 +671,13 @@ function updateStatus() {
 
 function updatePortalInfo() {
   document.getElementById("portalInfo").innerText = `Swap in ${movesUntilSwap} move(s)`;
+}
+
+// Returns this player's color ('w', 'b', or null for local/spectator)
+function getMyColor() {
+  if (myRole === 'host') return hostColor;
+  if (myRole === 'guest') return hostColor === 'w' ? 'b' : 'w';
+  return null;
 }
 
 // Update resign button dim state based on whose turn it is
@@ -667,10 +690,52 @@ function updateResignButtonState() {
     resignBtn.title = 'Resign';
     return;
   }
-  const isMyTurn = (myRole === 'host' && game.turn() === 'w') || (myRole === 'guest' && game.turn() === 'b');
+  const isMyTurn = game.turn() === getMyColor();
   resignBtn.disabled = !isMyTurn;
   resignBtn.style.opacity = isMyTurn ? '1' : '0.4';
   resignBtn.title = isMyTurn ? 'Resign' : 'Wait for your turn to resign';
+}
+
+/* -------------------- PLAYER BADGES -------------------- */
+function updatePlayerBadges() {
+  if (myRole === 'local') return;
+
+  const isHostWhite = (hostColor === 'w');
+  // From our perspective: bottom = my color, top = opponent's color
+  const myColor = getMyColor();
+  const myIsWhite = (myColor === 'w');
+
+  // Determine board orientation: who is at bottom
+  const orientation = board.orientation(); // 'white' or 'black'
+  const bottomIsWhite = (orientation === 'white');
+
+  // Bottom badge = whoever is at the bottom of the board
+  const bottomIsHost = (bottomIsWhite === isHostWhite);
+  const bottomLabel = bottomIsHost ? 'HOST' : 'GUEST';
+  const bottomPiece = bottomIsWhite ? '\u2654' : '\u265a';
+  const bottomIsMe = (myRole === 'host') ? bottomIsHost : !bottomIsHost;
+
+  // Top badge = the other player
+  const topLabel = bottomIsHost ? 'GUEST' : 'HOST';
+  const topPiece = bottomIsWhite ? '\u265a' : '\u2654';
+  const topIsMe = !bottomIsMe;
+
+  $('#badge-bottom-label').text(bottomLabel);
+  $('#badge-bottom-piece').text(bottomPiece)
+    .css('color', bottomIsWhite ? '#f0d9b5' : '#2d2d2d');
+  bottomIsMe ? $('#badge-bottom-you').removeClass('hidden') : $('#badge-bottom-you').addClass('hidden');
+
+  $('#badge-top-label').text(topLabel);
+  $('#badge-top-piece').text(topPiece)
+    .css('color', bottomIsWhite ? '#2d2d2d' : '#f0d9b5');
+  topIsMe ? $('#badge-top-you').removeClass('hidden') : $('#badge-top-you').addClass('hidden');
+}
+
+/* -------------------- FLIP BOARD -------------------- */
+function flipBoard() {
+  board.flip();
+  highlightPortals();
+  if (myRole !== 'local') updatePlayerBadges();
 }
 
 // Brief toast notification (bottom of screen)
@@ -692,14 +757,23 @@ function showToast(message) {
 function restartGame() {
   if (myRole === 'guest' || myRole === 'spectator') return;
   game.reset();
-  board.start();
   moveCount = 0;
   gameActive = true;
   popupShown = false;
   swapInterval = getRandomInterval();
   movesUntilSwap = swapInterval;
+
+  // Alternate colors each round
+  if (myRole === 'host') {
+    hostColor = (hostColor === 'w') ? 'b' : 'w';
+  }
+
+  // Orient board so our color is at the bottom
+  orientBoardForRole();
+  board.position('start');
   generatePortals();
   updateStatus();
+  if (myRole !== 'local') updatePlayerBadges();
 
   if (myRole === 'host' && roomChannel) {
     roomChannel.send({ type: 'broadcast', event: 'restart', payload: {} });
@@ -707,12 +781,21 @@ function restartGame() {
   }
 }
 
+/* -------------------- BOARD ORIENTATION -------------------- */
+function orientBoardForRole() {
+  if (myRole === 'local') return;
+  const myColor = getMyColor();
+  if (!myColor) return;
+  const desired = myColor === 'w' ? 'white' : 'black';
+  if (board.orientation() !== desired) board.flip();
+}
+
 function resign() {
   if (!gameActive) return;
-  
+
   // Turn restriction: only resign on your own colour's turn
-  if (myRole === 'host' && game.turn() !== 'w') return;
-  if (myRole === 'guest' && game.turn() !== 'b') return;
+  const myColor = getMyColor();
+  if (myColor && game.turn() !== myColor) return;
 
   const loser = game.turn() === 'w' ? 'White' : 'Black';
   const winner = loser === 'White' ? 'Black' : 'White';
@@ -737,8 +820,8 @@ board = Chessboard('board', {
 
     // Role checks
     if (myRole === 'spectator') return false;
-    if (myRole === 'host' && game.turn() === 'b') return false;
-    if (myRole === 'guest' && game.turn() === 'w') return false;
+    const myColor = getMyColor();
+    if (myColor && game.turn() !== myColor) return false;
 
     // Prevent dragging enemy pieces
     if ((game.turn() === 'w' && piece.search(/^b/) !== -1) ||

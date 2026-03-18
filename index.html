@@ -54,11 +54,29 @@
         <button class="btn tonal" onclick="resign()">
           <span class="material-symbols-rounded">flag</span> Resign
         </button>
+        <button class="btn tonal" onclick="flipBoard()" title="Flip Board">
+          <span class="material-symbols-rounded">flip</span> Flip
+        </button>
       </div>
     </div>
 
-    <div class="board-container">
-      <div id="board"></div>
+    <div class="board-wrapper">
+      <!-- Player badges: shown in multiplayer only -->
+      <div id="player-badges" class="player-badges hidden">
+        <div class="player-badge" id="badge-top">
+          <span class="badge-piece" id="badge-top-piece">♚</span>
+          <span class="badge-label" id="badge-top-label">GUEST</span>
+          <span class="badge-you hidden" id="badge-top-you">YOU</span>
+        </div>
+        <div class="player-badge" id="badge-bottom">
+          <span class="badge-piece" id="badge-bottom-piece">♔</span>
+          <span class="badge-label" id="badge-bottom-label">HOST</span>
+          <span class="badge-you hidden" id="badge-bottom-you">YOU</span>
+        </div>
+      </div>
+      <div class="board-container">
+        <div id="board"></div>
+      </div>
     </div>
   </main>
 
