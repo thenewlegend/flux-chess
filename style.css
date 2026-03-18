@@ -356,14 +356,91 @@ body {
 .splash-inner {
   text-align: center;
   opacity: 0;
-  animation: introReveal 1.4s ease forwards;
+  animation: introReveal 0.6s ease forwards;
   transform: scale(0.96);
 }
 
-.splash-screen.exit .splash-inner {
-  opacity: 0;
-  transform: scale(1.08);
-  transition: all 0.6s ease;
+.unified-lobby {
+  background: var(--md-sys-color-surface);
+  padding: 32px 24px;
+  border-radius: 24px;
+  box-shadow: var(--md-elevation-3);
+  width: 90%;
+  max-width: 400px;
+  transition: all 0.4s cubic-bezier(0.2, 0, 0, 1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.lobby-menu {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  margin-top: 24px;
+  animation: introReveal 0.4s ease forwards;
+}
+
+.lobby-menu.hidden {
+  display: none;
+}
+
+.main-btn {
+  width: 100%;
+  max-width: 250px;
+  height: 48px;
+  font-size: 1.1rem;
+}
+
+.lobby-input {
+  width: 100%;
+  max-width: 250px;
+  height: 48px;
+  border-radius: 12px;
+  border: 1px solid var(--md-sys-color-outline);
+  background: var(--md-sys-color-background);
+  color: var(--md-sys-color-on-background);
+  padding: 0 16px;
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+.room-code-display {
+  font-size: 1.5rem;
+  letter-spacing: 4px;
+  font-weight: bold;
+  padding: 12px;
+  background: var(--md-sys-color-background);
+  border-radius: 8px;
+  color: var(--md-sys-color-primary);
+  text-align: center;
+}
+
+.lobby-divider {
+  margin: 32px 0;
+  text-align: center;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 0.9rem;
+  font-weight: bold;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.lobby-divider::before,
+.lobby-divider::after {
+  content: "";
+  flex-grow: 1;
+  height: 1px;
+  background: var(--md-sys-color-outline);
+}
+
+.back-btn {
+  margin-top: 32px;
+  width: 100%;
 }
 
 #splash-logo {

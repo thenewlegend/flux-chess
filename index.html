@@ -99,42 +99,45 @@
     </div>
   </div>
 
-  <!-- Splash Screen / Lobby -->
+  <!-- Unified Splash Screen / Lobby -->
   <div id="splash" class="splash-screen">
-    <div class="splash-inner" id="splash-main">
+    <div class="splash-inner unified-lobby">
       <img src="img/flux-chess-white.png" alt="FLUX Chess Logo" id="splash-logo" />
-      <div class="text-block">
+      <div class="text-block" id="lobby-header">
         <h1>FLUX</h1>
-        <div class="lobby-buttons" style="margin-top: 30px; display: flex; flex-direction: column; gap: 16px; align-items: center;">
-          <button class="btn filled" onclick="startLocalGame()" style="width: 200px; font-size: 1.1rem; padding: 14px 24px;">Play Local</button>
-          <button class="btn tonal" onclick="showOnlineLobby()" style="width: 200px; font-size: 1.1rem; padding: 14px 24px;">Play Online</button>
+      </div>
+
+      <!-- Main Menu Actions -->
+      <div id="main-menu-options" class="lobby-menu">
+        <button class="btn filled main-btn" onclick="startLocalGame()">Play Local</button>
+        <button class="btn tonal main-btn" onclick="showOnlineLobby()">Play Online</button>
+      </div>
+
+      <!-- Online Play Actions -->
+      <div id="online-options" class="lobby-menu hidden">
+        <div class="lobby-section">
+          <h3>Host a Game</h3>
+          <button class="btn filled main-btn" onclick="createRoom()">Generate Room Code</button>
+          <div id="copy-code-container" class="hidden" style="margin-top: 16px; width: 100%; display: flex; align-items: center; gap: 8px;">
+            <div id="createdRoomCode" class="room-code-display" style="flex-grow: 1; margin: 0;"></div>
+            <button class="icon-button tonal" onclick="copyRoomCode()" title="Copy Code" style="height: 48px; width: 48px; border-radius: 12px; background: var(--md-sys-color-secondary-container);">
+              <span class="material-symbols-rounded">content_copy</span>
+            </button>
+          </div>
+          <p id="waitingMessage" class="secondary-text hidden" style="animation: softPulse 2s infinite;">Waiting for guest to join...</p>
         </div>
-      </div>
-    </div>
 
-    <!-- Online Lobby Panel -->
-    <div class="splash-inner hidden" id="splash-online" style="max-width: 400px; width: 90%; background: var(--md-sys-color-surface); padding: 32px; border-radius: 24px; box-shadow: var(--md-elevation-3);">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-        <h2 style="margin: 0; color: var(--md-sys-color-on-surface);">Online Multiplayer</h2>
-      </div>
+        <div class="lobby-divider">OR</div>
 
-      <div id="room-section" class="lobby-section">
-        <h3 style="margin-bottom: 16px;">Host a Game</h3>
-        <button class="btn filled" onclick="createRoom()" style="width: 100%;">Generate Room Code</button>
-        <div id="createdRoomCode" class="room-code-display hidden" style="margin-top: 16px; font-size: 1.5rem; letter-spacing: 4px; font-weight: bold; padding: 12px; background: var(--md-sys-color-background); border-radius: 8px;"></div>
-        <p id="waitingMessage" class="secondary-text hidden" style="margin-top: 12px; animation: softPulse 2s infinite;">Waiting for guest to join...</p>
+        <div class="lobby-section">
+          <h3>Join as Guest</h3>
+          <input type="text" id="joinRoomCode" placeholder="Enter Room Code" class="lobby-input text-center" style="text-transform: uppercase;">
+          <button class="btn tonal main-btn" id="joinBtn" onclick="joinRoomAsGuest()">Join Game</button>
+          <p id="joinError" class="error-text hidden" style="color: #ef4444; font-size: 0.85rem; margin-top: 8px;"></p>
+        </div>
+        
+        <button class="btn text-btn back-btn" onclick="backToMain()">← Back</button>
       </div>
-
-      <div class="lobby-divider" style="margin: 24px 0; text-align: center; color: var(--md-sys-color-on-surface-variant); font-size: 0.9rem; font-weight: bold;">OR</div>
-
-      <div class="lobby-section">
-        <h3 style="margin-bottom: 16px;">Join as Guest</h3>
-        <input type="text" id="joinRoomCode" placeholder="Enter Room Code" class="lobby-input text-center" style="text-transform: uppercase;">
-        <button class="btn tonal" id="joinBtn" onclick="joinRoomAsGuest()" style="width: 100%; margin-top: 12px;">Join Game</button>
-        <p id="joinError" class="error-text hidden" style="color: #ef4444; font-size: 0.85rem; margin-top: 8px;"></p>
-      </div>
-      
-      <button class="btn text-btn" onclick="backToMain()" style="margin-top: 24px; padding: 8px 16px; background: transparent; color: var(--md-sys-color-on-surface-variant);">← Back</button>
     </div>
   </div>
 

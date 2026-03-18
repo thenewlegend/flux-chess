@@ -173,13 +173,13 @@ function startLocalGame() {
 }
 
 function showOnlineLobby() {
-  document.getElementById('splash-main').classList.add('hidden');
-  document.getElementById('splash-online').classList.remove('hidden');
+  document.getElementById('main-menu-options').classList.add('hidden');
+  document.getElementById('online-options').classList.remove('hidden');
 }
 
 function backToMain() {
-  document.getElementById('splash-online').classList.add('hidden');
-  document.getElementById('splash-main').classList.remove('hidden');
+  document.getElementById('online-options').classList.add('hidden');
+  document.getElementById('main-menu-options').classList.remove('hidden');
 }
 
 function generateRoomCode() {
@@ -188,13 +188,38 @@ function generateRoomCode() {
 
 async function createRoom() {
   if (!supabaseClient) return alert("Supabase JS not loaded.");
-  // Force anonymous login to get an identity for Realtime presence
-  await supabaseClient.auth.signInAnonymously();
+  
+  // Try anonymous login but don't let it block room creation
+  try {
+    await supabaseClient.auth.signInAnonymously();
+  } catch (e) {
+    console.warn("Auth skipped/failed:", e);
+  }
 
   currentRoom = generateRoomCode();
-  $('#createdRoomCode').text(currentRoom).removeClass('hidden');
+  $('#createdRoomCode').text(currentRoom);
+  $('#copy-code-container').removeClass('hidden');
   $('#waitingMessage').removeClass('hidden');
   initRoomChannel(currentRoom, true);
+}
+
+function copyRoomCode() {
+  const code = $('#createdRoomCode').text();
+  if (code) {
+    navigator.clipboard.writeText(code).then(() => {
+      const btn = $('button[onclick="copyRoomCode()"]');
+      const icon = btn.find('.material-symbols-rounded');
+      icon.text('check');
+      btn.css('background', 'var(--md-sys-color-primary)');
+      btn.css('color', 'var(--md-sys-color-on-primary)');
+      
+      setTimeout(() => {
+        icon.text('content_copy');
+        btn.css('background', '');
+        btn.css('color', '');
+      }, 2000);
+    });
+  }
 }
 
 async function joinRoomAsGuest() {
@@ -204,8 +229,13 @@ async function joinRoomAsGuest() {
   if (!code) return $('#joinError').text('Enter a code.').removeClass('hidden');
 
   $('#joinBtn').text('Joining...');
-  // Force anonymous login to get an identity for Realtime presence
-  await supabaseClient.auth.signInAnonymously();
+  
+  try {
+    await supabaseClient.auth.signInAnonymously();
+  } catch (e) {
+    console.warn("Auth skipped/failed:", e);
+  }
+  
   currentRoom = code;
   initRoomChannel(currentRoom, false);
 }
@@ -264,8 +294,27 @@ function initRoomChannel(roomCode, isHost) {
     portalPairs = data.portalPairs;
     board.position(game.fen());
     highlightPortals();
-    updateStatus();
+    
+    if (data.gameActive === false) {
+      gameActive = false;
+      setStatus(data.statusText || "Game Over");
+      if (!popupShown) {
+        popupShown = true;
+        setTimeout(showRestartPopup, 400);
+      }
+    } else {
+      gameActive = true;
+      updateStatus();
+    }
     updatePortalInfo();
+  });
+
+  roomChannel.on('broadcast', { event: 'resign' }, (p) => {
+    endGame(p.payload.message);
+  });
+
+  roomChannel.on('broadcast', { event: 'restart' }, () => {
+    restartGame();
   });
 
   roomChannel.subscribe(async (status) => {
@@ -284,7 +333,9 @@ function broadcastState() {
       fen: game.fen(), 
       moveCount, 
       movesUntilSwap, 
-      portalPairs 
+      portalPairs,
+      gameActive,
+      statusText: document.getElementById("status").innerText
     }
   });
 }
@@ -420,6 +471,12 @@ function endGame(message) {
   if (!gameActive) return;
   gameActive = false;
   setStatus(message);
+  
+  // If host ends game, broadcast it immediately so guest stops
+  if (myRole === 'host') {
+    broadcastState();
+  }
+
   if (!popupShown) {
     popupShown = true;
     setTimeout(showRestartPopup, 400);
@@ -568,13 +625,24 @@ function restartGame() {
   movesUntilSwap = swapInterval;
   generatePortals();
   updateStatus();
+  
+  if (myRole === 'host' && roomChannel) {
+    roomChannel.send({ type: 'broadcast', event: 'restart', payload: {} });
+    broadcastState();
+  }
 }
 
 function resign() {
   if (!gameActive) return;
   const loser = game.turn() === 'w' ? 'White' : 'Black';
   const winner = loser === 'White' ? 'Black' : 'White';
-  endGame(`${loser} resigned. ${winner} wins.`);
+  const msg = `${loser} resigned. ${winner} wins.`;
+  
+  if (roomChannel && myRole !== 'local') {
+    roomChannel.send({ type: 'broadcast', event: 'resign', payload: { message: msg } });
+  }
+  
+  endGame(msg);
 }
 
 /* -------------------- BOARD -------------------- */
