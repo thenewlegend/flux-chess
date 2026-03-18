@@ -4,7 +4,50 @@ let board;
 let moveCount = 0;
 let gameActive = true;
 
-/* -------------------- PORTAL CONFIG -------------------- */
+/* -------------------- POPUP -------------------- */
+
+let popupShown = false;
+let restartTimer = null;
+
+function showRestartPopup() {
+  const popup = document.getElementById("restartPopup");
+  popup.classList.remove("hidden");
+
+  restartTimer = setTimeout(() => {
+    restartGame();
+    closePopup();
+  }, 60000 * 5);
+}
+
+function closePopup() {
+  document.getElementById("restartPopup").classList.add("hidden");
+
+  if (restartTimer) {
+    clearTimeout(restartTimer);
+    restartTimer = null;
+  }
+}
+
+function confirmRestart() {
+  closePopup();
+  restartGame();
+}
+
+/* -------------------- END GAME -------------------- */
+
+function endGame(message) {
+  if (!gameActive) return;
+
+  gameActive = false;
+  setStatus(message);
+
+  if (!popupShown) {
+    popupShown = true;
+    setTimeout(showRestartPopup, 400);
+  }
+}
+
+/* -------------------- PORTALS -------------------- */
 
 let portalPairs = [];
 
@@ -24,41 +67,11 @@ function getRandomInterval() {
   return Math.floor(Math.random() * 4) + 2;
 }
 
-/* -------------------- SQUARE HELPERS -------------------- */
-
-function getRandomSquareFromHalf(half) {
-  const files = ['a','b','c','d','e','f','g','h'];
-
-  let ranks;
-  if (half === "white") ranks = ['1','2','3','4'];
-  else ranks = ['5','6','7','8'];
-
-  return files[Math.floor(Math.random()*8)] +
-         ranks[Math.floor(Math.random()*4)];
-}
-
-/* -------------------- PORTAL GENERATION -------------------- */
-
 function generatePortals() {
   portalPairs = [];
 
-  const patterns = [
-    "files",
-    "diagonal",
-    "box",
-    "knight",
-    "edges",
-    "center_cross",
-    "wide_spread",
-    "zigzag",
-    "triangle",
-    "random_balanced"
-  ];
-
-  const pattern = patterns[Math.floor(Math.random() * patterns.length)];
-
   const files = ['a','b','c','d','e','f','g','h'];
-  const allowedRanks = ['3','4'];
+  const ranks = ['3','4'];
 
   function mirrorSquare(square) {
     const file = square[0];
@@ -66,81 +79,19 @@ function generatePortals() {
     return file + (9 - rank);
   }
 
-  function randomSquare() {
-    const file = files[Math.floor(Math.random() * 8)];
-    const rank = allowedRanks[Math.floor(Math.random() * allowedRanks.length)];
-    return file + rank;
+  let chosen = [];
+
+  while (chosen.length < 3) {
+    let sq = files[Math.floor(Math.random()*8)] +
+             ranks[Math.floor(Math.random()*2)];
+    if (!chosen.includes(sq)) chosen.push(sq);
   }
 
-  function pickUnique(list) {
-    return list.sort(() => 0.5 - Math.random()).slice(0, 3);
-  }
-
-  function pickGenerated() {
-    const set = new Set();
-    while (set.size < 3) {
-      set.add(randomSquare());
-    }
-    return Array.from(set);
-  }
-
-  let whiteSquares = [];
-
-  switch (pattern) {
-
-    case "files":
-      whiteSquares = pickGenerated();
-      break;
-
-    case "diagonal":
-      whiteSquares = pickUnique(['a3','b4','c3','d4','e3','f4','g3','h4']);
-      break;
-
-    case "box":
-      whiteSquares = pickUnique(['c3','d3','e3','f3','c4','d4','e4','f4']);
-      break;
-
-    case "knight":
-      whiteSquares = pickUnique(['b3','g3','c4','f4','d3','e3']);
-      break;
-
-    case "edges":
-      whiteSquares = pickUnique(['a3','h3','a4','h4','b3','g3']);
-      break;
-
-    case "center_cross":
-      whiteSquares = pickUnique(['d3','e3','d4','e4']);
-      break;
-
-    case "wide_spread":
-      whiteSquares = pickUnique(['a3','d4','h3','b4','g4']);
-      break;
-
-    case "zigzag":
-      whiteSquares = pickUnique(['a3','c4','e3','g4','h3']);
-      break;
-
-    case "triangle":
-      whiteSquares = pickUnique(['c3','e3','d4','b3','f3']);
-      break;
-
-    case "random_balanced":
-      // ensures spacing (no clustering)
-      const candidates = ['a3','b4','c3','d4','e3','f4','g3','h4'];
-      while (whiteSquares.length < 3) {
-        let pick = candidates[Math.floor(Math.random()*candidates.length)];
-        if (!whiteSquares.some(s => Math.abs(s.charCodeAt(0) - pick.charCodeAt(0)) <= 1)) {
-          whiteSquares.push(pick);
-        }
-      }
-      break;
-  }
-
-  whiteSquares.forEach((sq, i) => {
+  chosen.forEach((sq, i) => {
     portalPairs.push({
       a: sq,
       b: mirrorSquare(sq),
-      color: COLORS[i % COLORS.length]
+      color: COLORS[i]
     });
   });
 
@@ -213,16 +164,9 @@ function applyPortalSwap() {
 /* -------------------- VALIDATION -------------------- */
 
 function kingExists(color) {
-  const boardState = game.board();
-
-  for (let row of boardState) {
-    for (let piece of row) {
-      if (piece && piece.type === 'k' && piece.color === color) {
-        return true;
-      }
-    }
-  }
-  return false;
+  return game.board().some(row =>
+    row.some(p => p && p.type === 'k' && p.color === color)
+  );
 }
 
 function validateAfterPortal() {
@@ -231,15 +175,7 @@ function validateAfterPortal() {
 
   if (!whiteKing || !blackKing) {
     const winner = whiteKing ? "White" : "Black";
-    setStatus(`${winner} wins (king lost via portal)`);
-    gameActive = false;
-    return;
-  }
-
-  if (game.in_checkmate()) {
-    const winner = game.turn() === 'w' ? 'Black' : 'White';
-    setStatus(`Checkmate via portal. ${winner} wins.`);
-    gameActive = false;
+    endGame(`${winner} wins (king lost via portal)`);
   }
 }
 
@@ -255,11 +191,10 @@ function updateStatus() {
   let moveColor = game.turn() === 'w' ? 'White' : 'Black';
 
   if (game.in_checkmate()) {
-    setStatus(`Checkmate! ${moveColor === 'White' ? 'Black' : 'White'} wins.`);
-    gameActive = false;
+    const winner = moveColor === 'White' ? 'Black' : 'White';
+    endGame(`Checkmate! ${winner} wins.`);
   } else if (game.in_draw()) {
-    setStatus("Draw!");
-    gameActive = false;
+    endGame("Draw!");
   } else if (game.in_check()) {
     setStatus(`${moveColor} is in check.`);
   } else {
@@ -280,39 +215,13 @@ function restartGame() {
 
   moveCount = 0;
   gameActive = true;
+  popupShown = false;
 
   swapInterval = getRandomInterval();
   movesUntilSwap = swapInterval;
 
-  generatePortals(); // ONLY here → fixed per round
+  generatePortals();
   updateStatus();
-}
-
-let restartTimer = null;
-
-function showRestartPopup() {
-  const popup = document.getElementById("restartPopup");
-  popup.classList.remove("hidden");
-
-  // auto restart fallback (your existing logic)
-  restartTimer = setTimeout(() => {
-    restartGame();
-    closePopup();
-  }, 60000 * 5);
-}
-
-function closePopup() {
-  document.getElementById("restartPopup").classList.add("hidden");
-
-  if (restartTimer) {
-    clearTimeout(restartTimer);
-    restartTimer = null;
-  }
-}
-
-function confirmRestart() {
-  closePopup();
-  restartGame();
 }
 
 function resign() {
@@ -321,16 +230,7 @@ function resign() {
   const loser = game.turn() === 'w' ? 'White' : 'Black';
   const winner = loser === 'White' ? 'Black' : 'White';
 
-  setStatus(`${loser} resigned. ${winner} wins.`);
-  gameActive = false;
-
-   showRestartPopup(); 
-
-  setTimeout(() => {
-    restartGame();
-}, 60000*5);
-
-  
+  endGame(`${loser} resigned. ${winner} wins.`);
 }
 
 /* -------------------- BOARD -------------------- */
@@ -353,8 +253,7 @@ board = Chessboard('board', {
     if (move === null) return 'snapback';
 
     if (move.captured === 'k') {
-      setStatus("King captured. Game over.");
-      gameActive = false;
+      endGame("King captured. Game over.");
       return;
     }
 
@@ -366,8 +265,6 @@ board = Chessboard('board', {
 
       swapInterval = getRandomInterval();
       movesUntilSwap = swapInterval;
-
-      // IMPORTANT: portals DO NOT regenerate
     }
 
     updateStatus();
