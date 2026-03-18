@@ -449,4 +449,68 @@ body {
       0 0 0 0 transparent,
       0 0 0 0 transparent;
   }
+}
+
+/* -------------------- HIGHLIGHTS -------------------- */
+.highlight-move, .highlight-capture, .highlight-danger {
+  position: relative;
+  cursor: pointer;
+}
+
+/* Base highlight overlay to bring it on top of the pieces */
+.highlight-move::after, .highlight-capture::after, .highlight-danger::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100; /* Above the piece images */
+}
+
+/* Move dot */
+.highlight-move::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 24px;
+  height: 24px;
+  background-color: rgba(34, 197, 94, 0.4); /* Green dot */
+  border-radius: 50%;
+}
+
+/* Capture ring */
+.highlight-capture::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 5px solid rgba(220, 38, 38, 0.4);
+  background-color: rgba(220, 38, 38, 0.05);
+}
+
+/* Danger / King capture glow */
+.highlight-danger::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-color: rgba(220, 38, 38, 0.5);
+  box-shadow: inset 0 0 20px rgba(220, 38, 38, 0.9);
+  animation: pulseDanger 1s infinite;
+}
+
+/* Highlighting the square of the currently selected piece */
+.selected-square {
+  background-color: rgba(235, 208, 113, 0.4) !important;
+  box-shadow: inset 0 0 10px rgba(235, 208, 113, 0.6);
+}
+
+@keyframes pulseDanger {
+  0% { opacity: 0.6; }
+  50% { opacity: 0.9; }
+  100% { opacity: 0.6; }
+}
+
+/* Make squares clickable for click-to-move */
+.square-55d63 {
+  cursor: pointer;
 }

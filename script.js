@@ -67,7 +67,6 @@ function initParticles() {
 }
 
 function updateParticleColor() {
-  // Read value from CSS var
   const style = getComputedStyle(document.body);
   ptColor = style.getPropertyValue('--particle-color').trim() || 'rgba(100,100,100,0.2)';
 }
@@ -101,7 +100,6 @@ function animateParticles() {
   requestAnimationFrame(animateParticles);
 }
 
-
 /* -------------------- SPLASH & RESIZE -------------------- */
 document.addEventListener('DOMContentLoaded', () => {
   initThemeUI();
@@ -116,7 +114,6 @@ document.addEventListener('DOMContentLoaded', () => {
         splash.classList.add('hidden');
         document.body.style.overflow = 'auto';
         splash.remove();
-        // Resize board after splash overlay is gone to prevent sizing glitches
         if (board) {
           board.resize();
           highlightPortals();
@@ -127,14 +124,122 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('keydown', dismissSplash, { once: true });
   }
 
-  // Handle Board resizing when window scales down/up
   window.addEventListener('resize', () => {
     resizeParticles();
     if (board) {
-      board.resize(); // ChessboardJS resize function
-      highlightPortals(); // Portals need to be re-highlighted as DOM squares are rebuilt
+      board.resize();
+      highlightPortals();
     }
   });
+});
+
+/* -------------------- AUDIO -------------------- */
+const moveSound = document.getElementById('moveSound');
+const captureSound = document.getElementById('captureSound');
+const endSound = document.getElementById('endSound');
+
+function playMoveSound(isCapture) {
+  const sound = isCapture ? captureSound : moveSound;
+  if (sound) {
+    sound.currentTime = 0;
+    sound.play().catch(() => {});
+  }
+}
+
+function playEndSound() {
+  if (endSound) {
+    endSound.currentTime = 0;
+    endSound.play().catch(() => {});
+  }
+}
+
+/* -------------------- CLICK-TO-MOVE & HIGHLIGHTS -------------------- */
+
+let selectedSquare = null;
+
+function clearBoardEffects() {
+  $('.square-55d63').removeClass('highlight-move highlight-capture highlight-danger selected-square');
+}
+
+function processMove(source, target) {
+  if (!gameActive) return false;
+
+  const move = game.move({
+    from: source,
+    to: target,
+    promotion: 'q'
+  });
+
+  if (move === null) return false;
+
+  if (game.in_checkmate() || game.in_draw() || move.captured === 'k') {
+    playEndSound();
+  } else {
+    playMoveSound(!!move.captured);
+  }
+
+  if (move.captured === 'k') {
+    endGame("King captured. Game over.");
+    return true;
+  }
+
+  moveCount++;
+  movesUntilSwap--;
+
+  if (movesUntilSwap <= 0) {
+    applyPortalSwap();
+    swapInterval = getRandomInterval();
+    movesUntilSwap = swapInterval;
+  }
+
+  updateStatus();
+  updatePortalInfo();
+  return true;
+}
+
+$('#board').on('mousedown touchstart', '.square-55d63', function (e) {
+  if (!gameActive) return;
+
+  const square = $(this).attr('data-square');
+  const turn = game.turn();
+  const pieceColor = game.get(square) ? game.get(square).color : null;
+
+  if (selectedSquare === square) {
+    selectedSquare = null;
+    clearBoardEffects();
+    return;
+  }
+
+  if (selectedSquare) {
+    const moved = processMove(selectedSquare, square);
+    if (moved) {
+      board.position(game.fen());
+      highlightPortals();
+      selectedSquare = null;
+      clearBoardEffects();
+      return;
+    }
+  }
+
+  if (pieceColor === turn) {
+    selectedSquare = square;
+    clearBoardEffects();
+    $(this).addClass('selected-square');
+
+    const moves = game.moves({ square: square, verbose: true });
+    moves.forEach(m => {
+      const el = $(`.square-55d63[data-square="${m.to}"]`);
+      if (m.captured) {
+        if (m.captured === 'k') el.addClass('highlight-danger');
+        else el.addClass('highlight-capture');
+      } else {
+        el.addClass('highlight-move');
+      }
+    });
+  } else {
+    selectedSquare = null;
+    clearBoardEffects();
+  }
 });
 
 /* -------------------- POPUP -------------------- */
@@ -154,7 +259,6 @@ function showRestartPopup() {
 
 function closePopup() {
   document.getElementById("restartPopup").classList.add("hidden");
-
   if (restartTimer) {
     clearTimeout(restartTimer);
     restartTimer = null;
@@ -170,10 +274,8 @@ function confirmRestart() {
 
 function endGame(message) {
   if (!gameActive) return;
-
   gameActive = false;
   setStatus(message);
-
   if (!popupShown) {
     popupShown = true;
     setTimeout(showRestartPopup, 400);
@@ -183,18 +285,10 @@ function endGame(message) {
 /* -------------------- PORTALS -------------------- */
 
 let portalPairs = [];
-
 let swapInterval = getRandomInterval();
 let movesUntilSwap = swapInterval;
 
-const COLORS = [
-  "#22c55e",
-  "#3b82f6",
-  "#c4270f",
-  "#00ffff",
-  "#a855f7",
-  "#960180"
-];
+const COLORS = ["#22c55e", "#3b82f6", "#c4270f", "#00ffff", "#a855f7", "#960180"];
 
 function getRandomInterval() {
   return Math.floor(Math.random() * 4) + 2;
@@ -202,7 +296,6 @@ function getRandomInterval() {
 
 function generatePortals() {
   portalPairs = [];
-
   const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
   const ranks = ['3', '4'];
 
@@ -213,26 +306,18 @@ function generatePortals() {
   }
 
   let chosen = [];
-
   while (chosen.length < 3) {
-    let sq = files[Math.floor(Math.random() * 8)] +
-      ranks[Math.floor(Math.random() * 2)];
+    let sq = files[Math.floor(Math.random() * 8)] + ranks[Math.floor(Math.random() * 2)];
     if (!chosen.includes(sq)) chosen.push(sq);
   }
 
   chosen.forEach((sq, i) => {
-    portalPairs.push({
-      a: sq,
-      b: mirrorSquare(sq),
-      color: COLORS[i]
-    });
+    portalPairs.push({ a: sq, b: mirrorSquare(sq), color: COLORS[i] });
   });
 
   highlightPortals();
   updatePortalInfo();
 }
-
-/* -------------------- VISUAL -------------------- */
 
 function clearPortalStyles() {
   document.querySelectorAll('.square-55d63').forEach(el => {
@@ -243,7 +328,6 @@ function clearPortalStyles() {
 
 function highlightPortals() {
   clearPortalStyles();
-
   portalPairs.forEach(pair => {
     [pair.a, pair.b].forEach(square => {
       const el = document.querySelector(`[data-square="${square}"]`);
@@ -281,7 +365,6 @@ function applyPortalSwap() {
   portalPairs.forEach(pair => {
     const [r1, c1] = squareToCoords(pair.a);
     const [r2, c2] = squareToCoords(pair.b);
-
     let temp = grid[r1][c1];
     grid[r1][c1] = grid[r2][c2];
     grid[r2][c2] = temp;
@@ -289,7 +372,6 @@ function applyPortalSwap() {
 
   let newBoard = grid.map(compressRow).join('/');
   let newFen = [newBoard, ...parts.slice(1)].join(' ');
-
   game.load(newFen);
   validateAfterPortal();
 }
@@ -297,15 +379,12 @@ function applyPortalSwap() {
 /* -------------------- VALIDATION -------------------- */
 
 function kingExists(color) {
-  return game.board().some(row =>
-    row.some(p => p && p.type === 'k' && p.color === color)
-  );
+  return game.board().some(row => row.some(p => p && p.type === 'k' && p.color === color));
 }
 
 function validateAfterPortal() {
   const whiteKing = kingExists('w');
   const blackKing = kingExists('b');
-
   if (!whiteKing || !blackKing) {
     const winner = whiteKing ? "White" : "Black";
     endGame(`${winner} wins (king lost via portal)`);
@@ -313,16 +392,11 @@ function validateAfterPortal() {
 }
 
 /* -------------------- STATUS -------------------- */
-
-function setStatus(text) {
-  document.getElementById("status").innerText = text;
-}
+function setStatus(text) { document.getElementById("status").innerText = text; }
 
 function updateStatus() {
   if (!gameActive) return;
-
   let moveColor = game.turn() === 'w' ? 'White' : 'Black';
-
   if (game.in_checkmate()) {
     const winner = moveColor === 'White' ? 'Black' : 'White';
     endGame(`Checkmate! ${winner} wins.`);
@@ -336,33 +410,26 @@ function updateStatus() {
 }
 
 function updatePortalInfo() {
-  document.getElementById("portalInfo").innerText =
-    `Swap in ${movesUntilSwap} move(s)`;
+  document.getElementById("portalInfo").innerText = `Swap in ${movesUntilSwap} move(s)`;
 }
 
 /* -------------------- CONTROLS -------------------- */
-
 function restartGame() {
   game.reset();
   board.start();
-
   moveCount = 0;
   gameActive = true;
   popupShown = false;
-
   swapInterval = getRandomInterval();
   movesUntilSwap = swapInterval;
-
   generatePortals();
   updateStatus();
 }
 
 function resign() {
   if (!gameActive) return;
-
   const loser = game.turn() === 'w' ? 'White' : 'Black';
   const winner = loser === 'White' ? 'Black' : 'White';
-
   endGame(`${loser} resigned. ${winner} wins.`);
 }
 
@@ -371,37 +438,34 @@ function resign() {
 board = Chessboard('board', {
   draggable: true,
   position: 'start',
-
   pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
 
-  onDrop: function (source, target) {
-    if (!gameActive) return 'snapback';
-
-    const move = game.move({
-      from: source,
-      to: target,
-      promotion: 'q'
+  onDragStart: function(source, piece, position, orientation) {
+    if (!gameActive) return false;
+    if ((game.turn() === 'w' && piece.search(/^b/) !== -1) ||
+        (game.turn() === 'b' && piece.search(/^w/) !== -1)) {
+      return false;
+    }
+    clearBoardEffects();
+    selectedSquare = source;
+    const moves = game.moves({ square: source, verbose: true });
+    moves.forEach(m => {
+      const el = $(`.square-55d63[data-square="${m.to}"]`);
+      if (m.captured) {
+        if (m.captured === 'k') el.addClass('highlight-danger');
+        else el.addClass('highlight-capture');
+      } else {
+        el.addClass('highlight-move');
+      }
     });
+  },
 
-    if (move === null) return 'snapback';
-
-    if (move.captured === 'k') {
-      endGame("King captured. Game over.");
-      return;
-    }
-
-    moveCount++;
-    movesUntilSwap--;
-
-    if (movesUntilSwap <= 0) {
-      applyPortalSwap();
-
-      swapInterval = getRandomInterval();
-      movesUntilSwap = swapInterval;
-    }
-
-    updateStatus();
-    updatePortalInfo();
+  onDrop: function (source, target) {
+    clearBoardEffects();
+    selectedSquare = null;
+    if (!gameActive) return 'snapback';
+    const moved = processMove(source, target);
+    if (!moved) return 'snapback';
   },
 
   onSnapEnd: function () {
@@ -411,7 +475,6 @@ board = Chessboard('board', {
 });
 
 /* -------------------- INIT -------------------- */
-
 setTimeout(() => {
   generatePortals();
   updateStatus();
