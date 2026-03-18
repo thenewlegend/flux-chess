@@ -14,6 +14,7 @@ let roomChannel = null;
 let myRole = 'local'; // 'local', 'host', 'guest', 'spectator'
 let hostColor = 'w';  // which color the HOST plays; swaps each round
 let isRestoring = false;
+let pendingGameState = null;
 
 /* -------------------- UI & THEMING -------------------- */
 
@@ -197,6 +198,11 @@ function backToMain() {
   document.getElementById('main-menu-options').classList.remove('hidden');
 }
 
+function backToOnlineLobby() {
+  document.getElementById('role-selection-options').classList.add('hidden');
+  document.getElementById('online-options').classList.remove('hidden');
+}
+
 function generateRoomCode() {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
@@ -312,10 +318,41 @@ async function joinRoomAsGuest() {
   currentRoom = code;
   isRestoring = false;
 
-  // Apply fetched state immediately
-  applySyncedState(data.game_state);
+  // Instead of auto-joining, show role selection
+  showRoleSelection(code, data.game_state);
+}
 
-  initRoomChannel(currentRoom, false);
+function showRoleSelection(roomCode, state) {
+  pendingGameState = state;
+  currentRoom = roomCode;
+
+  $('#role-room-id').text(`Room: ${roomCode}`);
+
+  const hColor = state.hostColor === 'w' ? 'White' : 'Black';
+  const gColor = state.hostColor === 'w' ? 'Black' : 'White';
+
+  $('#join-as-host-btn').text(`Join as HOST (${hColor})`);
+  $('#join-as-guest-btn').text(`Join as GUEST (${gColor})`);
+
+  // Hide other menus, show role selection
+  document.getElementById('main-menu-options').classList.add('hidden');
+  document.getElementById('online-options').classList.add('hidden');
+  document.getElementById('role-selection-options').classList.remove('hidden');
+}
+
+async function joinWithRole(role) {
+  myRole = role;
+  if (!pendingGameState) return;
+
+  // Apply state
+  applySyncedState(pendingGameState);
+
+  // Initialize channel
+  initRoomChannel(currentRoom, myRole === 'host');
+
+  // Clear splash if we already selected
+  pendingGameState = null;
+  dismissLobby();
 }
 
 function initRoomChannel(roomCode, isHost) {
@@ -1046,18 +1083,12 @@ async function restoreSession() {
       .single();
 
     if (!error && data) {
-      applySyncedState(data.game_state);
+      showRoleSelection(currentRoom, data.game_state);
     } else {
       console.warn("Could not restore session from DB:", error);
       isRestoring = false;
       return;
     }
-
-    const storedHostColor = localStorage.getItem('flux-hostColor');
-    if (storedHostColor) hostColor = storedHostColor;
-
-    initRoomChannel(currentRoom, myRole === 'host');
-    setTimeout(dismissLobby, 100);
   }
 }
 

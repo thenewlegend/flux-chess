@@ -178,6 +178,26 @@
 
         <button class="btn text-btn back-btn" onclick="backToMain()">← Back</button>
       </div>
+
+      <!-- Role Selection Actions -->
+      <div id="role-selection-options" class="lobby-menu hidden">
+        <div class="lobby-section">
+          <h3 id="role-room-id">Joined Room: -</h3>
+          <p class="secondary-text" style="margin-bottom: 20px;">Choose a seat to start playing:</p>
+          <div id="role-buttons-container" style="display: flex; flex-direction: column; gap: 12px; width: 100%;">
+            <button id="join-as-host-btn" class="btn filled main-btn" onclick="joinWithRole('host')">
+              Join as HOST (White)
+            </button>
+            <button id="join-as-guest-btn" class="btn tonal main-btn" onclick="joinWithRole('guest')">
+              Join as GUEST (Black)
+            </button>
+            <button id="join-as-spectator-btn" class="btn text-btn main-btn" onclick="joinWithRole('spectator')">
+              Watch as Spectator
+            </button>
+          </div>
+        </div>
+        <button class="btn text-btn back-btn" onclick="backToOnlineLobby()">← Back</button>
+      </div>
     </div>
   </div>
 
