@@ -242,20 +242,44 @@ async function createRoom() {
 
 function copyRoomCode() {
   const code = $('#createdRoomCode').text();
-  if (code) {
-    navigator.clipboard.writeText(code).then(() => {
-      const btn = $('button[onclick="copyRoomCode()"]');
-      const icon = btn.find('.material-symbols-rounded');
-      icon.text('check');
-      btn.css('background', 'var(--md-sys-color-primary)');
-      btn.css('color', 'var(--md-sys-color-on-primary)');
+  if (!code) return;
 
-      setTimeout(() => {
-        icon.text('content_copy');
-        btn.css('background', '');
-        btn.css('color', '');
-      }, 2000);
+  const handleCopyUI = () => {
+    const btn = $('button[onclick="copyRoomCode()"]');
+    const icon = btn.find('.material-symbols-rounded');
+    icon.text('check');
+    btn.css('background', 'var(--md-sys-color-primary)');
+    btn.css('color', 'var(--md-sys-color-on-primary)');
+
+    setTimeout(() => {
+      icon.text('content_copy');
+      btn.css('background', '');
+      btn.css('color', '');
+    }, 2000);
+  };
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(code).then(handleCopyUI).catch(err => {
+      console.error("Clipboard write failed:", err);
     });
+  } else {
+    // Fallback for non-secure contexts (http vs https/localhost)
+    const textArea = document.createElement("textarea");
+    textArea.value = code;
+    // Ensure it's not visible
+    textArea.style.position = "fixed";
+    textArea.style.left = "-9999px";
+    textArea.style.top = "0";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    try {
+      const successful = document.execCommand('copy');
+      if (successful) handleCopyUI();
+    } catch (err) {
+      console.error('Fallback copy failed', err);
+    }
+    document.body.removeChild(textArea);
   }
 }
 
@@ -418,9 +442,9 @@ async function broadcastState() {
   // Update DB state
   const { error } = await supabaseClient
     .from('rooms')
-    .update({ 
+    .update({
       game_state: state,
-      last_updated: new Date().toISOString() 
+      last_updated: new Date().toISOString()
     })
     .eq('code', currentRoom);
 
