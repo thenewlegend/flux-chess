@@ -406,6 +406,36 @@ body {
   }
 }
 
+.lobby-input {
+  width: 100%;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  background-color: var(--md-sys-color-background);
+  color: var(--md-sys-color-on-background);
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+
+.lobby-input:focus {
+  outline: none;
+  border-color: var(--md-sys-color-primary);
+}
+
+.text-btn {
+  background: transparent;
+  border: none;
+  color: var(--md-sys-color-primary);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.text-btn:hover {
+  text-decoration: underline;
+}
+
 @keyframes softPulse {
 
   0%,

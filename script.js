@@ -4,6 +4,15 @@ let board;
 let moveCount = 0;
 let gameActive = true;
 
+// Supabase Configuration
+const SUPABASE_URL = 'https://ddrlfuyxrpqaiobbgtfv.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkcmxmdXl4cnBxYWlvYmJndGZ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4MjkzNjcsImV4cCI6MjA4OTQwNTM2N30.KvInhOKqeLqitW0fOkcm0Z_em5_H3kb_4V4EtmceAik';
+const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+
+let currentRoom = null;
+let roomChannel = null;
+let myRole = 'local'; // 'local', 'host', 'guest', 'spectator'
+
 /* -------------------- UI & THEMING -------------------- */
 
 // Setup Tutorial Modal
@@ -107,21 +116,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const splash = document.getElementById('splash');
   if (splash) {
-    function dismissSplash() {
-      splash.classList.add('exit');
-
-      setTimeout(() => {
-        splash.classList.add('hidden');
-        document.body.style.overflow = 'auto';
-        splash.remove();
-        if (board) {
-          board.resize();
-          highlightPortals();
-        }
-      }, 600);
-    }
-    splash.addEventListener('click', dismissSplash);
-    document.addEventListener('keydown', dismissSplash, { once: true });
+    // We removed the click-to-dismiss. It's now handled by startLocalGame().
+    // Use the explicit lobby buttons instead.
   }
 
   window.addEventListener('resize', () => {
@@ -156,6 +152,157 @@ function playEndSound() {
 /* -------------------- CLICK-TO-MOVE & HIGHLIGHTS -------------------- */
 
 let selectedSquare = null;
+
+/* -------------------- MULTIPLAYER LOBBY -------------------- */
+function dismissLobby() {
+  const splash = document.getElementById('splash');
+  if (splash) {
+    splash.classList.add('exit');
+    setTimeout(() => {
+      splash.classList.add('hidden');
+      document.body.style.overflow = 'auto';
+      splash.remove(); // completely remove splash from DOM
+      if (board) { board.resize(); highlightPortals(); }
+    }, 600);
+  }
+}
+
+function startLocalGame() {
+  myRole = 'local';
+  dismissLobby();
+}
+
+function showOnlineLobby() {
+  document.getElementById('splash-main').classList.add('hidden');
+  document.getElementById('splash-online').classList.remove('hidden');
+}
+
+function backToMain() {
+  document.getElementById('splash-online').classList.add('hidden');
+  document.getElementById('splash-main').classList.remove('hidden');
+}
+
+function generateRoomCode() {
+  return Math.random().toString(36).substring(2, 8).toUpperCase();
+}
+
+async function createRoom() {
+  if (!supabaseClient) return alert("Supabase JS not loaded.");
+  // Force anonymous login to get an identity for Realtime presence
+  await supabaseClient.auth.signInAnonymously();
+
+  currentRoom = generateRoomCode();
+  $('#createdRoomCode').text(currentRoom).removeClass('hidden');
+  $('#waitingMessage').removeClass('hidden');
+  initRoomChannel(currentRoom, true);
+}
+
+async function joinRoomAsGuest() {
+  if (!supabaseClient) return alert("Supabase JS not loaded.");
+  const code = $('#joinRoomCode').val().toUpperCase();
+  $('#joinError').addClass('hidden');
+  if (!code) return $('#joinError').text('Enter a code.').removeClass('hidden');
+
+  $('#joinBtn').text('Joining...');
+  // Force anonymous login to get an identity for Realtime presence
+  await supabaseClient.auth.signInAnonymously();
+  currentRoom = code;
+  initRoomChannel(currentRoom, false);
+}
+
+function initRoomChannel(roomCode, isHost) {
+  myRole = isHost ? 'host' : 'guest';
+  updateOnlineStatus();
+
+  roomChannel = supabaseClient.channel(`room_${roomCode}`, {
+    config: { presence: { key: myRole } }
+  });
+  
+  roomChannel.on('presence', { event: 'sync' }, () => {
+    const state = roomChannel.presenceState();
+    const users = Object.keys(state);
+    
+    // If I am guest but there's already a guest, become spectator
+    if (!isHost && myRole === 'guest') {
+      let guestsCount = 0;
+      users.forEach(k => { if (state[k][0].role === 'guest') guestsCount++; });
+      if (guestsCount > 1) {
+        myRole = 'spectator';
+        updateOnlineStatus();
+      }
+    }
+
+    if (isHost && users.length >= 2) {
+      $('#waitingMessage').text('Players joined! Starting...');
+      setTimeout(dismissLobby, 1000);
+      broadcastState();
+    } else if (!isHost && myRole !== 'local') {
+      setTimeout(dismissLobby, 500);
+      // Wait a bit for subscription to stabilize then request state
+      setTimeout(() => {
+        roomChannel.send({ type: 'broadcast', event: 'request_sync', payload: {} });
+      }, 1500);
+    }
+  });
+
+  roomChannel.on('broadcast', { event: 'move' }, (payload) => {
+    applyRemoteMove(payload.payload.source, payload.payload.target);
+    // If guest moved, host follow up with state to confirm swap logic
+    if (isHost) setTimeout(broadcastState, 150);
+  });
+
+  roomChannel.on('broadcast', { event: 'request_sync' }, () => {
+    if (isHost) broadcastState();
+  });
+
+  roomChannel.on('broadcast', { event: 'sync_state' }, (p) => {
+    const data = p.payload;
+    console.log("Receiving sync_state", data);
+    game.load(data.fen);
+    moveCount = data.moveCount;
+    movesUntilSwap = data.movesUntilSwap;
+    portalPairs = data.portalPairs;
+    board.position(game.fen());
+    highlightPortals();
+    updateStatus();
+    updatePortalInfo();
+  });
+
+  roomChannel.subscribe(async (status) => {
+    if (status === 'SUBSCRIBED') {
+      await roomChannel.track({ role: myRole, joined_at: new Date().toISOString() });
+    }
+  });
+}
+
+function broadcastState() {
+  if (!roomChannel || myRole !== 'host') return;
+  roomChannel.send({
+    type: 'broadcast',
+    event: 'sync_state',
+    payload: { 
+      fen: game.fen(), 
+      moveCount, 
+      movesUntilSwap, 
+      portalPairs 
+    }
+  });
+}
+
+function updateOnlineStatus() {
+  if (myRole === 'local') return;
+  $('#onlineStatus').text(`Room: ${currentRoom} | Role: ${myRole.toUpperCase()}`).removeClass('hidden');
+}
+
+function applyRemoteMove(source, target) {
+  const move = processMove(source, target);
+  if (move) {
+    board.position(game.fen());
+    highlightPortals();
+    selectedSquare = null;
+    clearBoardEffects();
+  }
+}
 
 function clearBoardEffects() {
   $('.square-55d63').removeClass('highlight-move highlight-capture highlight-danger selected-square');
@@ -213,8 +360,16 @@ $('#board').on('click', '.square-55d63', function () {
     const isMoveValid = moves.some(m => m.to === square);
 
     if (isMoveValid) {
+      // Prevent local click move if spectator, or wrong turn in multiplayer
+      if (myRole === 'spectator') return;
+      if (myRole === 'host' && game.turn() === 'b') return;
+      if (myRole === 'guest' && game.turn() === 'w') return;
+
       const moved = processMove(selectedSquare, square);
       if (moved) {
+        if (roomChannel && myRole !== 'local') {
+          roomChannel.send({ type: 'broadcast', event: 'move', payload: { source: selectedSquare, target: square } });
+        }
         board.position(game.fen());
         highlightPortals();
         selectedSquare = null;
@@ -432,6 +587,11 @@ board = Chessboard('board', {
   onDragStart: function (source, piece, position, orientation) {
     if (!gameActive) return false;
 
+    // Role checks
+    if (myRole === 'spectator') return false;
+    if (myRole === 'host' && game.turn() === 'b') return false;
+    if (myRole === 'guest' && game.turn() === 'w') return false;
+
     // Prevent dragging enemy pieces
     if ((game.turn() === 'w' && piece.search(/^b/) !== -1) ||
       (game.turn() === 'b' && piece.search(/^w/) !== -1)) {
@@ -471,6 +631,12 @@ board = Chessboard('board', {
 
     // It was a real physical drag to a new square
     const moved = processMove(source, target);
+
+    if (moved && roomChannel && myRole !== 'local') {
+      roomChannel.send({ type: 'broadcast', event: 'move', payload: { source, target } });
+      // If host, broadcast full state immediately after move
+      if (myRole === 'host') setTimeout(broadcastState, 100);
+    }
 
     // The move is processed, remove selection visually
     clearBoardEffects();
