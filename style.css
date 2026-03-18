@@ -1,22 +1,28 @@
 /* Variables Setup */
-:root, [data-theme="dark"] {
+:root,
+[data-theme="dark"] {
   /* Dark Theme (Default) - AMOLED Black / Gold */
-  --md-sys-color-background: #000000;  /* AMOLED true black */
+  --md-sys-color-background: #000000;
+  /* AMOLED true black */
   --md-sys-color-on-background: #e2e8f0;
-  --md-sys-color-surface: #0a0a0a;     /* Very dark surface */
+  --md-sys-color-surface: #0a0a0a;
+  /* Very dark surface */
   --md-sys-color-on-surface: #f8fafc;
   --md-sys-color-surface-variant: #121212;
   --md-sys-color-on-surface-variant: #cbd5e1;
-  --md-sys-color-primary: #ebd071; /* Gold */
-  --md-sys-color-on-primary: #3d2b00; /* Dark Brown/Gold for contrast */
+  --md-sys-color-primary: #ebd071;
+  /* Gold */
+  --md-sys-color-on-primary: #3d2b00;
+  /* Dark Brown/Gold for contrast */
   --md-sys-color-secondary-container: #171717;
   --md-sys-color-on-secondary-container: #d4e0ff;
   --md-sys-color-outline: #222222;
-  
-  --particle-color: rgba(235, 208, 113, 0.15); /* Faint gold */
 
-  --md-elevation-1: 0 1px 3px rgba(255,255,255,0.03), 0 1px 2px rgba(255,255,255,0.01);
-  --md-elevation-3: 0 8px 24px rgba(0,0,0,0.8), 0 4px 8px rgba(0,0,0,0.5);
+  --particle-color: rgba(235, 208, 113, 0.15);
+  /* Faint gold */
+
+  --md-elevation-1: 0 1px 3px rgba(255, 255, 255, 0.03), 0 1px 2px rgba(255, 255, 255, 0.01);
+  --md-elevation-3: 0 8px 24px rgba(0, 0, 0, 0.8), 0 4px 8px rgba(0, 0, 0, 0.5);
 }
 
 [data-theme="light"] {
@@ -27,16 +33,18 @@
   --md-sys-color-on-surface: #1f2937;
   --md-sys-color-surface-variant: #e2e8f0;
   --md-sys-color-on-surface-variant: #475569;
-  --md-sys-color-primary: #154c79; /* Deep Blue */
+  --md-sys-color-primary: #154c79;
+  /* Deep Blue */
   --md-sys-color-on-primary: #ffffff;
   --md-sys-color-secondary-container: #dbeafe;
   --md-sys-color-on-secondary-container: #1e3a8a;
   --md-sys-color-outline: #cbd5e1;
 
-  --particle-color: rgba(21, 76, 121, 0.15); /* Faint deep blue */
+  --particle-color: rgba(21, 76, 121, 0.15);
+  /* Faint deep blue */
 
-  --md-elevation-1: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
-  --md-elevation-3: 0 10px 20px rgba(0,0,0,0.1), 0 6px 6px rgba(0,0,0,0.05);
+  --md-elevation-1: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+  --md-elevation-3: 0 10px 20px rgba(0, 0, 0, 0.1), 0 6px 6px rgba(0, 0, 0, 0.05);
 }
 
 /* Reset & Base */
@@ -51,7 +59,8 @@ body {
   color: var(--md-sys-color-on-background);
   font-family: 'Roboto', sans-serif;
   transition: background-color 0.3s ease, color 0.3s ease;
-  overflow: hidden; /* Locked until splash exits */
+  overflow: hidden;
+  /* Locked until splash exits */
 }
 
 #particles-canvas {
@@ -146,14 +155,15 @@ body {
 }
 
 .status-card #status {
-  font-size: 1.25rem;
-  font-weight: 500;
+  font-size: 1rem;
+
 }
 
 .secondary-text {
   color: var(--md-sys-color-on-surface-variant);
-  font-size: 0.95rem;
+  font-size: 1.1rem;
   margin-top: 8px;
+  font-weight: 500;
 }
 
 /* Buttons */
@@ -171,7 +181,8 @@ body {
   gap: 8px;
   padding: 10px 24px;
   border: none;
-  border-radius: 24px; /* Pill shape */
+  border-radius: 24px;
+  /* Pill shape */
   font-family: inherit;
   font-size: 0.95rem;
   font-weight: 500;
@@ -235,7 +246,7 @@ body {
   position: fixed;
   inset: 0;
   z-index: 1000;
-  background-color: rgba(0,0,0,0.6);
+  background-color: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
@@ -384,13 +395,27 @@ body {
 }
 
 @keyframes introReveal {
-  0% { opacity: 0; transform: scale(0.92); }
-  100% { opacity: 1; transform: scale(1); }
+  0% {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 @keyframes softPulse {
-  0%, 100% { opacity: 0.35; }
-  50% { opacity: 0.8; }
+
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+
+  50% {
+    opacity: 0.8;
+  }
 }
 
 /* Portals */
@@ -404,10 +429,10 @@ body {
   inset: 0;
   border-radius: 2px;
   pointer-events: none;
-  
+
   border: 3px solid var(--portal-color);
   box-shadow: 0 0 0 0 var(--portal-color);
-  
+
   /* Create moving highlight */
   animation: borderSweep 15s cubic-bezier(0.4, 0, 0.2, 1) infinite;
   z-index: 10;
@@ -421,6 +446,7 @@ body {
       0 0 0 0 transparent,
       0 0 0 0 transparent;
   }
+
   25% {
     box-shadow:
       0 0 0 0 transparent,
@@ -428,6 +454,7 @@ body {
       0 0 0 0 transparent,
       0 0 0 0 transparent;
   }
+
   50% {
     box-shadow:
       0 0 0 0 transparent,
@@ -435,6 +462,7 @@ body {
       0 3px 0 0 var(--portal-color),
       0 0 0 0 transparent;
   }
+
   75% {
     box-shadow:
       0 0 0 0 transparent,
@@ -442,6 +470,7 @@ body {
       0 0 0 0 transparent,
       -3px 0 0 0 var(--portal-color);
   }
+
   100% {
     box-shadow:
       0 -3px 0 0 var(--portal-color),
@@ -452,18 +481,23 @@ body {
 }
 
 /* -------------------- HIGHLIGHTS -------------------- */
-.highlight-move, .highlight-capture, .highlight-danger {
+.highlight-move,
+.highlight-capture,
+.highlight-danger {
   position: relative;
   cursor: pointer;
 }
 
 /* Base highlight overlay to bring it on top of the pieces */
-.highlight-move::after, .highlight-capture::after, .highlight-danger::after {
+.highlight-move::after,
+.highlight-capture::after,
+.highlight-danger::after {
   content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 100; /* Above the piece images */
+  z-index: 100;
+  /* Above the piece images */
 }
 
 /* Move dot */
@@ -473,9 +507,10 @@ body {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 24px;
-  height: 24px;
-  background-color: rgba(34, 197, 94, 0.4); /* Green dot */
+  width: 14px;
+  height: 14px;
+  background-color: rgba(34, 197, 94, 0.4);
+  /* Green dot */
   border-radius: 50%;
 }
 
@@ -505,12 +540,20 @@ body {
 }
 
 @keyframes pulseDanger {
-  0% { opacity: 0.6; }
-  50% { opacity: 0.9; }
-  100% { opacity: 0.6; }
+  0% {
+    opacity: 0.6;
+  }
+
+  50% {
+    opacity: 0.9;
+  }
+
+  100% {
+    opacity: 0.6;
+  }
 }
 
 /* Make squares clickable for click-to-move */
 .square-55d63 {
   cursor: pointer;
-}
+}

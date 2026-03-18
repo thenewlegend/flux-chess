@@ -142,14 +142,14 @@ function playMoveSound(isCapture) {
   const sound = isCapture ? captureSound : moveSound;
   if (sound) {
     sound.currentTime = 0;
-    sound.play().catch(() => {});
+    sound.play().catch(() => { });
   }
 }
 
 function playEndSound() {
   if (endSound) {
     endSound.currentTime = 0;
-    endSound.play().catch(() => {});
+    endSound.play().catch(() => { });
   }
 }
 
@@ -429,19 +429,19 @@ board = Chessboard('board', {
   position: 'start',
   pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
 
-  onDragStart: function(source, piece, position, orientation) {
+  onDragStart: function (source, piece, position, orientation) {
     if (!gameActive) return false;
-    
+
     // Prevent dragging enemy pieces
     if ((game.turn() === 'w' && piece.search(/^b/) !== -1) ||
-        (game.turn() === 'b' && piece.search(/^w/) !== -1)) {
+      (game.turn() === 'b' && piece.search(/^w/) !== -1)) {
       return false; // Aborts drag, ALLOWING native click to fire!
     }
-    
+
     // We are grabbing our own piece. Select it!
     clearBoardEffects();
     selectedSquare = source;
-    
+
     // Visually highlight the grabbed square
     const squareEl = document.querySelector(`.square-55d63[data-square="${source}"]`);
     if (squareEl) squareEl.classList.add('selected-square');
@@ -471,7 +471,7 @@ board = Chessboard('board', {
 
     // It was a real physical drag to a new square
     const moved = processMove(source, target);
-    
+
     // The move is processed, remove selection visually
     clearBoardEffects();
     selectedSquare = null;
