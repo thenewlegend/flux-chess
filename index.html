@@ -43,7 +43,7 @@
     <div class="left-panel">
       <div class="card status-card">
         <div id="status">Ready to play.</div>
-        <div id="portalInfo" class="secondary-text">Swap in - move(s)</div>
+        <div id="portalInfo" class="secondary-text">Swap in - </div>
         <div id="onlineStatus" class="secondary-text hidden"
           style="margin-top: 12px; font-size: 0.9rem; color: var(--md-sys-color-primary);"></div>
       </div>
@@ -136,10 +136,13 @@
         <div id="restore-session-section" class="lobby-section hidden"
           style="margin-bottom: 24px; padding: 16px; background: var(--md-sys-color-secondary-container); border-radius: 16px; border: 1px dashed var(--md-sys-color-primary); width: 100%;">
           <h3 style="margin-bottom: 8px;">Restore Session?</h3>
-          <p class="secondary-text" id="restore-text" style="margin-bottom: 12px; font-size: 0.85rem;">You were previously in room: -</p>
+          <p class="secondary-text" id="restore-text" style="margin-bottom: 12px; font-size: 0.85rem;">You were
+            previously in room: -</p>
           <div style="display: flex; gap: 8px; width: 100%;">
-            <button class="btn filled" onclick="restoreSession()" style="flex: 1; height: 40px; font-size: 0.85rem;">Restore</button>
-            <button class="btn tonal" onclick="forgetSession()" style="flex: 1; height: 40px; font-size: 0.85rem;">Forget</button>
+            <button class="btn filled" onclick="restoreSession()"
+              style="flex: 1; height: 40px; font-size: 0.85rem;">Restore</button>
+            <button class="btn tonal" onclick="forgetSession()"
+              style="flex: 1; height: 40px; font-size: 0.85rem;">Forget</button>
           </div>
         </div>
         <button class="btn filled main-btn" onclick="startLocalGame()">Play Local</button>

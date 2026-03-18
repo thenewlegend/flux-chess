@@ -301,14 +301,14 @@ function initRoomChannel(roomCode, isHost) {
 
   roomChannel.on('broadcast', { event: 'request_sync' }, (p) => {
     const requesterRole = p.payload ? p.payload.role : null;
-    
+
     // Host always responds to sync requests
     if (myRole === 'host') {
-       broadcastState();
-    } 
+      broadcastState();
+    }
     // Guest responds only if the host is the one requesting (e.g. host reloaded)
     else if (myRole === 'guest' && requesterRole === 'host') {
-       broadcastState();
+      broadcastState();
     }
   });
 
@@ -321,7 +321,7 @@ function initRoomChannel(roomCode, isHost) {
     portalPairs = data.portalPairs;
     if (data.hostColor !== undefined) hostColor = data.hostColor;
     board.position(game.fen());
-    
+
     // Ensure portals highlight, sometimes board.position needs a tiny tick to finish DOM
     setTimeout(highlightPortals, 50);
 
@@ -364,10 +364,10 @@ function initRoomChannel(roomCode, isHost) {
   roomChannel.subscribe(async (status) => {
     if (status === 'SUBSCRIBED') {
       await roomChannel.track({ role: myRole, joined_at: new Date().toISOString() });
-      
+
       // If we are restoring a session, ask for the current state as soon as we connect
       if (isRestoring) {
-         roomChannel.send({ type: 'broadcast', event: 'request_sync', payload: { role: myRole } });
+        roomChannel.send({ type: 'broadcast', event: 'request_sync', payload: { role: myRole } });
       }
     }
   });
@@ -398,7 +398,7 @@ function updateOnlineStatus() {
     return;
   }
 
-  $('#onlineStatus').text(`Room: ${currentRoom} | Role: ${myRole.toUpperCase()}`).removeClass('hidden');
+  $('#onlineStatus').text(`Room: ${currentRoom}`).removeClass('hidden');
 
   if (myRole === 'host') {
     $('#restartBtn').removeClass('hidden');
@@ -525,14 +525,14 @@ function showRestartPopup() {
     $('#confirmRestartBtn').removeClass('hidden');
     $('#restartPopupNo').removeClass('hidden');
     $('#restartPopupClose').addClass('hidden'); // Close only via session end/restart
-    
+
     // Auto restart after 5 mins
     if (restartTimer) clearTimeout(restartTimer);
     restartTimer = setTimeout(() => {
       confirmRestart();
     }, 60000 * 5);
   }
-  
+
   popup.classList.remove("hidden");
 }
 
@@ -613,12 +613,20 @@ function clearPortalStyles() {
 
 function highlightPortals() {
   clearPortalStyles();
+
+  // Calculate charge percentage (0-100)
+  // Logic: 0 moves made = 0%, 1 move left = ~75-80%, swap ready = 100%
+  const charge = Math.max(0, Math.min(100, ((swapInterval - movesUntilSwap) / swapInterval) * 100));
+  const isReady = movesUntilSwap <= 1;
+
   portalPairs.forEach(pair => {
     [pair.a, pair.b].forEach(square => {
       const el = document.querySelector(`[data-square="${square}"]`);
       if (el) {
         el.classList.add('portal');
         el.style.setProperty('--portal-color', pair.color);
+        el.style.setProperty('--portal-charge', charge.toFixed(1));
+        el.classList.toggle('ready', isReady);
       }
     });
   });
@@ -713,7 +721,7 @@ function updateStatus(suppressVibration = false) {
 }
 
 function updatePortalInfo() {
-  document.getElementById("portalInfo").innerText = `Swap in ${movesUntilSwap} move(s)`;
+  document.getElementById("portalInfo").innerText = `Swap in ${movesUntilSwap}`;
 }
 
 // Returns this player's color ('w', 'b', or null for local/spectator)
@@ -947,9 +955,9 @@ function clearSession() {
 function checkRestoreSession() {
   const storedRoom = localStorage.getItem('flux-room');
   const storedRole = localStorage.getItem('flux-role');
-  
-  if (storedRoom && storedRoom !== 'null' && storedRoom !== 'undefined' && 
-      storedRole && storedRole !== 'null' && storedRole !== 'undefined') {
+
+  if (storedRoom && storedRoom !== 'null' && storedRoom !== 'undefined' &&
+    storedRole && storedRole !== 'null' && storedRole !== 'undefined') {
     $('#restore-text').text(`You were previously in room: ${storedRoom}`);
     $('#restore-session-section').removeClass('hidden');
   } else {
@@ -964,10 +972,10 @@ function restoreSession() {
     currentRoom = storedRoom;
     myRole = storedRole;
     isRestoring = true;
-    
+
     // Safety timeout: if no one responds to sync request, stop waiting
     setTimeout(() => { isRestoring = false; }, 3000);
-    
+
     // Reset to a fresh game state locally, will be overwritten by sync_state if successful
     game.reset();
     moveCount = 0;
@@ -975,7 +983,7 @@ function restoreSession() {
     popupShown = false;
     portalPairs = [];
     movesUntilSwap = getRandomInterval();
-    
+
     const storedHostColor = localStorage.getItem('flux-hostColor');
     if (storedHostColor) hostColor = storedHostColor;
 
@@ -989,7 +997,7 @@ function restoreSession() {
 
     // Joining the channel will trigger the sync request via the SUBSCRIBED callback
     initRoomChannel(currentRoom, myRole === 'host');
-    
+
     setTimeout(dismissLobby, 100);
   }
 }
