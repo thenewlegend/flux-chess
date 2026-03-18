@@ -18,18 +18,31 @@
 
   <h2>Portal Chess</h2>
 
+  <div id="status"></div>
+  <div id="portalInfo"></div>
+  <div id="status"></div>
+
   <div id="controls">
-    <button onclick="restartGame()">Restart</button>
     <button onclick="resign()">Resign</button>
+
+    <button onclick="restartGame()">Restart</button>
   </div>
 
-  <div id="status"></div>
-<div id="portalInfo"></div>
-
-  <div id="status"></div>
+  
 
 <div style="display: flex; justify-content: center; align-items: center; height: 100vh;">
   <div id="board" style="width: 400px"></div>
+</div>
+
+<div id="restartPopup" class="popup hidden">
+  <div class="popup-content">
+    <p>Game ended.<br>
+      Restart now?</p>
+    <div class="popup-actions">
+      <button onclick="confirmRestart()">Yes</button>
+      <button onclick="closePopup()">No</button>
+    </div>
+  </div>
 </div>
 
   <!-- Libraries -->

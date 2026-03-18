@@ -288,6 +288,33 @@ function restartGame() {
   updateStatus();
 }
 
+let restartTimer = null;
+
+function showRestartPopup() {
+  const popup = document.getElementById("restartPopup");
+  popup.classList.remove("hidden");
+
+  // auto restart fallback (your existing logic)
+  restartTimer = setTimeout(() => {
+    restartGame();
+    closePopup();
+  }, 60000 * 5);
+}
+
+function closePopup() {
+  document.getElementById("restartPopup").classList.add("hidden");
+
+  if (restartTimer) {
+    clearTimeout(restartTimer);
+    restartTimer = null;
+  }
+}
+
+function confirmRestart() {
+  closePopup();
+  restartGame();
+}
+
 function resign() {
   if (!gameActive) return;
 
@@ -296,6 +323,14 @@ function resign() {
 
   setStatus(`${loser} resigned. ${winner} wins.`);
   gameActive = false;
+
+   showRestartPopup(); 
+
+  setTimeout(() => {
+    restartGame();
+}, 60000*5);
+
+  
 }
 
 /* -------------------- BOARD -------------------- */
