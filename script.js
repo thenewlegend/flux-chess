@@ -25,7 +25,7 @@ function initThemeUI() {
     icon.innerText = currentTheme === 'dark' ? 'light_mode' : 'dark_mode';
   }
 
-  const logoSrc = currentTheme === 'dark' ? 'img/flux-chess-white.png' : 'img/flux-chess-dark.png';
+  const logoSrc = currentTheme === 'dark' ? 'img/flux-chess-dark.png' : 'img/flux-chess-white.png';
   const appLogo = document.getElementById('app-logo');
   const splashLogo = document.getElementById('splash-logo');
 
