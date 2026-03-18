@@ -1,78 +1,113 @@
 <!DOCTYPE html>
-<html>
+<html lang="en" data-theme="dark">
+
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>FLUX Chess</title>
 
+  <!-- External libraries -->
+  <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet"
-    href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
 
   <link rel="stylesheet" href="style.css">
 
 </head>
 
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-  const splash = document.getElementById('splash');
-
-  if (!splash) return; // safety check
-
-  function dismissSplash() {
-    splash.classList.add('exit');
-
-    setTimeout(() => {
-      splash.classList.add('hidden');
-      document.body.style.overflow = 'auto';
-      splash.remove();
-    }, 600);
-  }
-
-  // Click anywhere on splash
-  splash.addEventListener('click', dismissSplash);
-
-  // Keyboard fallback
-  document.addEventListener('keydown', dismissSplash);
-});
-</script>
-
 <body>
-  <div class="flux-chess">
-  <h2>FLUX</h2>
-  <p>Chess</p>
-</div>
+  <canvas id="particles-canvas"></canvas>
 
-  <div id="controls">
-    <button onclick="restartGame()">Restart</button>
-    <button onclick="resign()">Resign</button>
-  </div>
+  <header class="app-header">
+    <div class="header-title">
+      <img src="img/flux-chess-white.png" alt="FLUX Logo" id="app-logo">
+      <div class="header-text">
+        <h2>FLUX</h2>
+        <p>Chess</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="icon-button" onclick="openTutorial()" aria-label="Tutorial">
+        <span class="material-symbols-rounded">help</span>
+      </button>
+      <button class="icon-button" onclick="toggleTheme()" aria-label="Toggle Theme">
+        <span class="material-symbols-rounded" id="theme-icon">light_mode</span>
+      </button>
+    </div>
+  </header>
 
-  <div id="status"></div>
-  <div id="portalInfo"></div>
+  <main class="app-main">
+    <div class="left-panel">
+      <div class="card status-card">
+        <div id="status">Ready to play.</div>
+        <div id="portalInfo" class="secondary-text">Swap in - move(s)</div>
+      </div>
 
-  <div id="board" style="width: 400px; margin: 20px auto;"></div>
+      <div class="card controls-card">
+        <button class="btn filled" onclick="restartGame()">
+          <span class="material-symbols-rounded">refresh</span> Restart
+        </button>
+        <button class="btn tonal" onclick="resign()">
+          <span class="material-symbols-rounded">flag</span> Resign
+        </button>
+      </div>
+    </div>
 
-  <!-- Popup -->
-  <div id="restartPopup" class="popup hidden">
-    <div class="popup-content">
-      <p>Game ended.<br>Restart now?</p>
-      <div class="popup-actions">
-        <button onclick="confirmRestart()">Yes</button>
-        <button onclick="closePopup()">No</button>
+    <div class="board-container">
+      <div id="board"></div>
+    </div>
+  </main>
+
+  <!-- Restart Popup Modal -->
+  <div id="restartPopup" class="modal hidden">
+    <div class="modal-surface">
+      <h3 class="modal-title">Game Ended</h3>
+      <p>Restart now?</p>
+      <div class="modal-actions">
+        <button class="btn tonal" onclick="closePopup()">No</button>
+        <button class="btn filled" onclick="confirmRestart()">Yes</button>
       </div>
     </div>
   </div>
 
-
-<div id="splash" class="flux-chess">
-  <div class="splash-inner">
-    <img src="img/flux-chess-dark.png" alt="FLUX Chess Logo" id="logo" />
-    
-    <div class="text-block">
-      <h2>READY OR NOT</h1>
-      <p class="continue">Click to continue</p>
+  <!-- Tutorial Modal -->
+  <div id="tutorialModal" class="modal hidden">
+    <div class="modal-surface tutorial-surface">
+      <div class="modal-header">
+        <h3 class="modal-title">How to Play</h3>
+        <button class="icon-button" onclick="closeTutorial()" aria-label="Close Tutorial">
+          <span class="material-symbols-rounded">close</span>
+        </button>
+      </div>
+      <div class="tutorial-content">
+        <div class="tutorial-step">
+          <p>Normal chess rules apply, but there are portals on the board!</p>
+          <img src="https://placehold.co/400x400/2a3b5c/ebd071?text=GIF+1:1" alt="Portal entering" class="tutorial-img">
+        </div>
+        <div class="tutorial-step">
+          <p>Every few moves, pieces standing on portals swap positions.</p>
+          <img src="https://placehold.co/400x400/2a3b5c/ebd071?text=GIF+1:1" alt="Portal swapping" class="tutorial-img">
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn filled" onclick="closeTutorial()">Got it!</button>
+      </div>
     </div>
   </div>
-</div>
 
+  <!-- Splash Screen -->
+  <div id="splash" class="splash-screen">
+    <div class="splash-inner">
+      <img src="img/flux-chess-white.png" alt="FLUX Chess Logo" id="splash-logo" />
+      <div class="text-block">
+        <h1>PvP</h1>
+        <p class="continue">Click to Start</p>
+      </div>
+    </div>
+  </div>
 
   <!-- Libraries -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.12.0/chess.min.js"></script>
@@ -81,7 +116,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   <script src="script.js"></script>
 
-  
-
 </body>
+
 </html>
