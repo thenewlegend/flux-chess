@@ -61,14 +61,17 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
   overflow-x: hidden;
   overflow-y: auto;
-  
+
   /* Hide scrollbar but keep functionality */
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge */
 }
 
 body::-webkit-scrollbar {
-  display: none; /* Chrome, Safari and Opera */
+  display: none;
+  /* Chrome, Safari and Opera */
 }
 
 /* Visual cue for scrollable content: a subtle bottom fade */
@@ -81,7 +84,8 @@ body::after {
   height: 60px;
   background: linear-gradient(transparent, var(--md-sys-color-background));
   pointer-events: none;
-  z-index: 9998; /* Just below splash */
+  z-index: 9998;
+  /* Just below splash */
   opacity: 0.8;
 }
 
@@ -330,7 +334,7 @@ body::after {
 .badge-piece {
   font-size: 1.4rem;
   line-height: 1;
-  text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 .badge-label {
@@ -456,8 +460,15 @@ body::after {
 }
 
 @keyframes bounceSoft {
-  0%, 100% { transform: translate(-50%, 0); }
-  50% { transform: translate(-50%, 10px); }
+
+  0%,
+  100% {
+    transform: translate(-50%, 0);
+  }
+
+  50% {
+    transform: translate(-50%, 10px);
+  }
 }
 
 .tutorial-step p {
@@ -521,14 +532,16 @@ body::after {
   align-items: center;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  position: relative; /* For the fade indicator */
+  position: relative;
+  /* For the fade indicator */
 }
 
 /* Internal lobby fade */
 .unified-lobby::after {
   content: "";
   position: sticky;
-  bottom: -28px; /* Offset the padding */
+  bottom: -28px;
+  /* Offset the padding */
   left: 0;
   width: 100%;
   height: 40px;
@@ -740,8 +753,17 @@ body::after {
 }
 
 @keyframes portalFillPulse {
-  0%, 100% { transform: scaleY(1); opacity: 0.2; }
-  50% { transform: scaleY(1.05); opacity: 0.4; }
+
+  0%,
+  100% {
+    transform: scaleY(1);
+    opacity: 0.2;
+  }
+
+  50% {
+    transform: scaleY(1.05);
+    opacity: 0.4;
+  }
 }
 
 @keyframes borderSweep {

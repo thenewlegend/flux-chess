@@ -573,7 +573,7 @@ let portalPairs = [];
 let swapInterval = getRandomInterval();
 let movesUntilSwap = swapInterval;
 
-const COLORS = ["#22c55e", "#3b82f6", "#c4270f", "#00ffff", "#a855f7", "#960180"];
+const COLORS = ["#14ac4cff", "#175ccbff", "#ce1b00ff", "#009a9aff", "#7c12e0ff", "#8e0179ff"];
 
 function getRandomInterval() {
   return Math.floor(Math.random() * 4) + 2;
