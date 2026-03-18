@@ -150,6 +150,18 @@ function playEndSound() {
   }
 }
 
+/* -------------------- HAPTICS -------------------- */
+function vibrate(pattern) {
+  if (navigator.vibrate) {
+    navigator.vibrate(pattern);
+  }
+}
+
+function vibrateMove() { vibrate(10); }
+function vibrateCapture() { vibrate([25, 20, 25]); }
+function vibrateCheck() { vibrate([40, 50, 40]); }
+function vibrateSwap() { vibrate([60, 40, 80]); }
+
 /* -------------------- CLICK-TO-MOVE & HIGHLIGHTS -------------------- */
 
 let selectedSquare = null;
@@ -295,7 +307,10 @@ function initRoomChannel(roomCode, isHost) {
     portalPairs = data.portalPairs;
     if (data.hostColor !== undefined) hostColor = data.hostColor;
     board.position(game.fen());
-    highlightPortals();
+    
+    // Ensure portals highlight, sometimes board.position needs a tiny tick to finish DOM
+    setTimeout(highlightPortals, 50);
+
     // Orient board so local player always sees their color at the bottom
     orientBoardForRole();
     updatePlayerBadges();
@@ -309,7 +324,7 @@ function initRoomChannel(roomCode, isHost) {
       }
     } else {
       gameActive = true;
-      updateStatus();
+      updateStatus(true); // pass true to suppress vibration during sync
     }
     updatePortalInfo();
   });
@@ -402,6 +417,8 @@ function processMove(source, target) {
     playEndSound();
   } else {
     playMoveSound(!!move.captured);
+    if (move.captured) vibrateCapture();
+    else vibrateMove();
   }
 
   if (move.captured === 'k') {
@@ -586,6 +603,7 @@ function highlightPortals() {
 /* -------------------- SWAP -------------------- */
 
 function applyPortalSwap() {
+  vibrateSwap();
   let fen = game.fen();
   let parts = fen.split(' ');
   let boardPart = parts[0].split('/');
@@ -638,7 +656,7 @@ function validateAfterPortal() {
 /* -------------------- STATUS -------------------- */
 function setStatus(text) { document.getElementById("status").innerText = text; }
 
-function updateStatus() {
+function updateStatus(suppressVibration = false) {
   if (!gameActive) return;
   let moveColor = game.turn() === 'w' ? 'White' : 'Black';
   const statusCard = document.querySelector('.status-card');
@@ -651,6 +669,7 @@ function updateStatus() {
     if (statusCard) statusCard.classList.remove('my-turn');
     endGame("Draw!");
   } else if (game.in_check()) {
+    if (!suppressVibration) vibrateCheck();
     setStatus(`${moveColor} is in check.`);
     updateResignButtonState();
     if (myRole !== 'local') {
