@@ -243,7 +243,7 @@ async function createRoom() {
   $('#copy-code-container').removeClass('hidden');
   $('#waitingMessage').removeClass('hidden');
   isRestoring = false;
-  initRoomChannel(currentRoom, true);
+  initRoomChannel(currentRoom, 'host');
 }
 
 function copyRoomCode() {
@@ -331,8 +331,9 @@ function showRoleSelection(roomCode, state) {
   const hColor = state.hostColor === 'w' ? 'White' : 'Black';
   const gColor = state.hostColor === 'w' ? 'Black' : 'White';
 
-  $('#join-as-host-btn').text(`Join as HOST (${hColor})`);
-  $('#join-as-guest-btn').text(`Join as GUEST (${gColor})`);
+  $('#host-color-label').text(`Plays as ${hColor}`);
+  $('#guest-color-label').text(`Plays as ${gColor}`);
+
 
   // Hide other menus, show role selection
   document.getElementById('main-menu-options').classList.add('hidden');
@@ -347,22 +348,24 @@ async function joinWithRole(role) {
   // Apply state
   applySyncedState(pendingGameState);
 
-  // Initialize channel
-  initRoomChannel(currentRoom, myRole === 'host');
+  // Initialize channel with the SELECTED role
+  initRoomChannel(currentRoom, myRole);
 
   // Clear splash if we already selected
   pendingGameState = null;
   dismissLobby();
 }
 
-function initRoomChannel(roomCode, isHost) {
-  myRole = isHost ? 'host' : 'guest';
+function initRoomChannel(roomCode, roleAtJoin) {
+  myRole = roleAtJoin;
   saveSession();
   updateOnlineStatus();
 
   roomChannel = supabaseClient.channel(`room_${roomCode}`, {
     config: { presence: { key: myRole } }
   });
+
+  const isHost = (myRole === 'host');
 
   // Listen for DB changes instead of Broadcast for state sync
   roomChannel.on(
