@@ -536,19 +536,9 @@ body::after {
   /* For the fade indicator */
 }
 
-/* Internal lobby fade */
+/* Internal lobby fade removed for better mobile clickability */
 .unified-lobby::after {
-  content: "";
-  position: sticky;
-  bottom: -28px;
-  /* Offset the padding */
-  left: 0;
-  width: 100%;
-  height: 40px;
-  background: linear-gradient(transparent, var(--md-sys-color-surface));
-  pointer-events: none;
-  flex-shrink: 0;
-  margin-top: -40px;
+  display: none;
 }
 
 .unified-lobby::-webkit-scrollbar {
@@ -716,6 +706,7 @@ body::after {
 /* Portals */
 .portal {
   position: relative;
+  overflow: hidden; /* Ensure liquid fill stays inside */
 }
 
 .portal::after {
@@ -736,20 +727,19 @@ body::after {
 .portal::before {
   content: "";
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: calc(var(--portal-charge, 0) * 1%);
+  inset: 0;
   background-color: var(--portal-color);
-  opacity: 0.15;
-  transition: height 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0.35; /* Increased for mobile visibility */
+  transform: scaleY(calc(var(--portal-charge, 0) / 100));
+  transform-origin: bottom;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
   pointer-events: none;
   z-index: 5;
 }
 
 .portal.ready::before {
   animation: portalFillPulse 1.5s ease-in-out infinite;
-  opacity: 0.3;
+  opacity: 0.4;
 }
 
 @keyframes portalFillPulse {

@@ -315,11 +315,18 @@ function initRoomChannel(roomCode, isHost) {
   roomChannel.on('broadcast', { event: 'sync_state' }, (p) => {
     const data = p.payload;
     console.log("Receiving sync_state", data);
+    
+    // Safety: ensure we process hostColor first to keep sides consistent
+    if (data.hostColor !== undefined) {
+       console.log(`Syncing hostColor: ${hostColor} -> ${data.hostColor}`);
+       hostColor = data.hostColor;
+       orientBoardForRole();
+    }
+
     game.load(data.fen);
     moveCount = data.moveCount;
     movesUntilSwap = data.movesUntilSwap;
     portalPairs = data.portalPairs;
-    if (data.hostColor !== undefined) hostColor = data.hostColor;
     board.position(game.fen());
 
     // Ensure portals highlight, sometimes board.position needs a tiny tick to finish DOM
@@ -449,6 +456,7 @@ function processMove(source, target) {
     return true;
   }
 
+  isRestoring = false; // Move made = active play
   moveCount++;
   movesUntilSwap--;
 
@@ -819,6 +827,7 @@ function restartGame() {
     hostColor = (hostColor === 'w') ? 'b' : 'w';
   }
 
+  isRestoring = false; // New game = active play
   // Orient board so our color is at the bottom
   orientBoardForRole();
   board.position('start');
