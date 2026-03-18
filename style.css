@@ -59,8 +59,8 @@ body {
   color: var(--md-sys-color-on-background);
   font-family: 'Roboto', sans-serif;
   transition: background-color 0.3s ease, color 0.3s ease;
-  overflow: hidden;
-  /* Locked until splash exits */
+  overflow-x: hidden; /* No horizontal scroll ever */
+  overflow-y: auto; /* Allow vertical scroll once splash exits */
 }
 
 #particles-canvas {
@@ -120,10 +120,13 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 24px 16px;
-  gap: 24px;
+  padding: 16px;
+  gap: 20px;
   max-width: 1000px;
   margin: 0 auto;
+  /* Scrollable if content overflows viewport height */
+  min-height: calc(100vh - 60px);
+  box-sizing: border-box;
 }
 
 @media (min-width: 768px) {
@@ -132,6 +135,7 @@ body {
     align-items: flex-start;
     justify-content: center;
     padding: 32px 24px;
+    gap: 24px;
   }
 }
 
@@ -140,7 +144,13 @@ body {
   flex-direction: column;
   gap: 16px;
   width: 100%;
-  max-width: 400px;
+  max-width: min(100%, 340px);
+}
+
+@media (min-width: 768px) {
+  .left-panel {
+    max-width: 280px;
+  }
 }
 
 /* Cards */
@@ -229,12 +239,12 @@ body {
   background-color: var(--md-sys-color-surface-variant);
 }
 
-/* Board Container */
+/* Board Container — caps at viewport width/height to prevent overflow */
 .board-container {
   width: 100%;
-  max-width: 500px;
-  /* Maintain aspect ratio */
+  max-width: min(90vw, 500px);
   aspect-ratio: 1/1;
+  flex-shrink: 0;
 }
 
 #board {
@@ -362,15 +372,19 @@ body {
 
 .unified-lobby {
   background: var(--md-sys-color-surface);
-  padding: 32px 24px;
+  padding: 28px 20px;
   border-radius: 24px;
   box-shadow: var(--md-elevation-3);
   width: 90%;
   max-width: 400px;
+  /* Cap height so lobby never overflows on short screens */
+  max-height: 90vh;
+  overflow-y: auto;
   transition: all 0.4s cubic-bezier(0.2, 0, 0, 1);
   display: flex;
   flex-direction: column;
   align-items: center;
+  scrollbar-width: thin;
 }
 
 .lobby-menu {
@@ -663,4 +677,88 @@ body {
 /* Make squares clickable for click-to-move */
 .square-55d63 {
   cursor: pointer;
+}
+
+/* -------------------- TOAST NOTIFICATION -------------------- */
+#flux-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(16px);
+  background: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+  border: 1px solid var(--md-sys-color-outline);
+  padding: 10px 20px;
+  border-radius: 24px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  box-shadow: var(--md-elevation-3);
+  z-index: 9000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  white-space: nowrap;
+}
+
+#flux-toast.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* -------------------- LOBBY SECTIONS -------------------- */
+.lobby-section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.lobby-section h3 {
+  margin: 0 0 4px 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface-variant);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* -------------------- SPLASH LOGO RESPONSIVE -------------------- */
+#splash-logo {
+  width: min(45vw, 160px);
+  max-width: 160px;
+  height: auto;
+  margin: 0 auto;
+  display: block;
+}
+
+/* -------------------- TURN INDICATOR -------------------- */
+/* Subtle glow on the status card when it's your turn online */
+.status-card.my-turn {
+  box-shadow: 0 0 0 2px var(--md-sys-color-primary), var(--md-elevation-1);
+  transition: box-shadow 0.4s ease;
+}
+
+/* -------------------- MOBILE OVERRIDES -------------------- */
+@media (max-width: 480px) {
+  .app-header {
+    padding: 8px 16px;
+  }
+
+  .card {
+    padding: 14px;
+  }
+
+  .btn {
+    padding: 8px 16px;
+    font-size: 0.88rem;
+  }
+
+  .main-btn {
+    max-width: 100%;
+  }
+
+  #splash-logo {
+    width: min(40vw, 120px);
+  }
 }

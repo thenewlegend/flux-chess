@@ -48,7 +48,7 @@
       </div>
 
       <div class="card controls-card">
-        <button class="btn filled" onclick="restartGame()">
+        <button id="restartBtn" class="btn filled" onclick="restartGame()">
           <span class="material-symbols-rounded">refresh</span> Restart
         </button>
         <button class="btn tonal" onclick="resign()">
@@ -68,8 +68,9 @@
       <h3 class="modal-title">Game Ended</h3>
       <p>Restart now?</p>
       <div class="modal-actions">
-        <button class="btn tonal" onclick="closePopup()">No</button>
-        <button class="btn filled" onclick="confirmRestart()">Yes</button>
+        <button id="restartPopupNo" class="btn tonal" onclick="closePopup()">No</button>
+        <button id="confirmRestartBtn" class="btn filled" onclick="confirmRestart()">Yes</button>
+        <button id="restartPopupClose" class="btn filled hidden" onclick="closePopup()">Close</button>
       </div>
     </div>
   </div>

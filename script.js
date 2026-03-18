@@ -188,7 +188,7 @@ function generateRoomCode() {
 
 async function createRoom() {
   if (!supabaseClient) return alert("Supabase JS not loaded.");
-  
+
   // Try anonymous login but don't let it block room creation
   try {
     await supabaseClient.auth.signInAnonymously();
@@ -212,7 +212,7 @@ function copyRoomCode() {
       icon.text('check');
       btn.css('background', 'var(--md-sys-color-primary)');
       btn.css('color', 'var(--md-sys-color-on-primary)');
-      
+
       setTimeout(() => {
         icon.text('content_copy');
         btn.css('background', '');
@@ -229,13 +229,13 @@ async function joinRoomAsGuest() {
   if (!code) return $('#joinError').text('Enter a code.').removeClass('hidden');
 
   $('#joinBtn').text('Joining...');
-  
+
   try {
     await supabaseClient.auth.signInAnonymously();
   } catch (e) {
     console.warn("Auth skipped/failed:", e);
   }
-  
+
   currentRoom = code;
   initRoomChannel(currentRoom, false);
 }
@@ -247,11 +247,11 @@ function initRoomChannel(roomCode, isHost) {
   roomChannel = supabaseClient.channel(`room_${roomCode}`, {
     config: { presence: { key: myRole } }
   });
-  
+
   roomChannel.on('presence', { event: 'sync' }, () => {
     const state = roomChannel.presenceState();
     const users = Object.keys(state);
-    
+
     // If I am guest but there's already a guest, become spectator
     if (!isHost && myRole === 'guest') {
       let guestsCount = 0;
@@ -294,7 +294,7 @@ function initRoomChannel(roomCode, isHost) {
     portalPairs = data.portalPairs;
     board.position(game.fen());
     highlightPortals();
-    
+
     if (data.gameActive === false) {
       gameActive = false;
       setStatus(data.statusText || "Game Over");
@@ -329,10 +329,10 @@ function broadcastState() {
   roomChannel.send({
     type: 'broadcast',
     event: 'sync_state',
-    payload: { 
-      fen: game.fen(), 
-      moveCount, 
-      movesUntilSwap, 
+    payload: {
+      fen: game.fen(),
+      moveCount,
+      movesUntilSwap,
       portalPairs,
       gameActive,
       statusText: document.getElementById("status").innerText
@@ -341,8 +341,20 @@ function broadcastState() {
 }
 
 function updateOnlineStatus() {
-  if (myRole === 'local') return;
+  if (myRole === 'local') {
+    $('#restartBtn').removeClass('hidden');
+    updateResignButtonState();
+    return;
+  }
+  
   $('#onlineStatus').text(`Room: ${currentRoom} | Role: ${myRole.toUpperCase()}`).removeClass('hidden');
+
+  if (myRole === 'host') {
+    $('#restartBtn').removeClass('hidden');
+  } else {
+    $('#restartBtn').addClass('hidden');
+  }
+  updateResignButtonState();
 }
 
 function applyRemoteMove(source, target) {
@@ -444,12 +456,27 @@ let restartTimer = null;
 
 function showRestartPopup() {
   const popup = document.getElementById("restartPopup");
+  const isGuest = myRole === 'guest' || myRole === 'spectator';
+
+  // Adjust popup content based on role
+  popup.querySelector('p').textContent = isGuest ? 'The game has ended.' : 'Restart now?';
   popup.classList.remove("hidden");
 
-  restartTimer = setTimeout(() => {
-    restartGame();
-    closePopup();
-  }, 60000 * 5);
+  // Only host or local can see restart buttons
+  if (myRole === 'host' || myRole === 'local') {
+    $('#confirmRestartBtn').removeClass('hidden');
+    $('#restartPopupNo').removeClass('hidden');
+    $('#restartPopupClose').addClass('hidden');
+    // Auto restart after 5 mins
+    restartTimer = setTimeout(() => {
+      restartGame();
+      closePopup();
+    }, 60000 * 5);
+  } else {
+    $('#confirmRestartBtn').addClass('hidden');
+    $('#restartPopupNo').addClass('hidden');
+    $('#restartPopupClose').removeClass('hidden');
+  }
 }
 
 function closePopup() {
@@ -471,7 +498,7 @@ function endGame(message) {
   if (!gameActive) return;
   gameActive = false;
   setStatus(message);
-  
+
   // If host ends game, broadcast it immediately so guest stops
   if (myRole === 'host') {
     broadcastState();
@@ -598,15 +625,31 @@ function setStatus(text) { document.getElementById("status").innerText = text; }
 function updateStatus() {
   if (!gameActive) return;
   let moveColor = game.turn() === 'w' ? 'White' : 'Black';
+  const statusCard = document.querySelector('.status-card');
+
   if (game.in_checkmate()) {
     const winner = moveColor === 'White' ? 'Black' : 'White';
+    if (statusCard) statusCard.classList.remove('my-turn');
     endGame(`Checkmate! ${winner} wins.`);
   } else if (game.in_draw()) {
+    if (statusCard) statusCard.classList.remove('my-turn');
     endGame("Draw!");
   } else if (game.in_check()) {
     setStatus(`${moveColor} is in check.`);
+    updateResignButtonState();
+    if (myRole !== 'local') {
+      const isMyTurn = (myRole === 'host' && game.turn() === 'w') || (myRole === 'guest' && game.turn() === 'b');
+      if (statusCard) statusCard.classList.toggle('my-turn', isMyTurn);
+      if (isMyTurn) showToast('You are in check!');
+    }
   } else {
     setStatus(`${moveColor} to move.`);
+    updateResignButtonState();
+    if (myRole !== 'local') {
+      const isMyTurn = (myRole === 'host' && game.turn() === 'w') || (myRole === 'guest' && game.turn() === 'b');
+      if (statusCard) statusCard.classList.toggle('my-turn', isMyTurn);
+      if (isMyTurn) showToast('Your turn');
+    }
   }
 }
 
@@ -614,8 +657,40 @@ function updatePortalInfo() {
   document.getElementById("portalInfo").innerText = `Swap in ${movesUntilSwap} move(s)`;
 }
 
+// Update resign button dim state based on whose turn it is
+function updateResignButtonState() {
+  const resignBtn = document.querySelector('button[onclick="resign()"]');
+  if (!resignBtn) return;
+  if (myRole === 'local') {
+    resignBtn.disabled = false;
+    resignBtn.style.opacity = '1';
+    resignBtn.title = 'Resign';
+    return;
+  }
+  const isMyTurn = (myRole === 'host' && game.turn() === 'w') || (myRole === 'guest' && game.turn() === 'b');
+  resignBtn.disabled = !isMyTurn;
+  resignBtn.style.opacity = isMyTurn ? '1' : '0.4';
+  resignBtn.title = isMyTurn ? 'Resign' : 'Wait for your turn to resign';
+}
+
+// Brief toast notification (bottom of screen)
+let toastTimeout;
+function showToast(message) {
+  let toast = document.getElementById('flux-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'flux-toast';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = message;
+  toast.classList.add('visible');
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => toast.classList.remove('visible'), 2500);
+}
+
 /* -------------------- CONTROLS -------------------- */
 function restartGame() {
+  if (myRole === 'guest' || myRole === 'spectator') return;
   game.reset();
   board.start();
   moveCount = 0;
@@ -625,7 +700,7 @@ function restartGame() {
   movesUntilSwap = swapInterval;
   generatePortals();
   updateStatus();
-  
+
   if (myRole === 'host' && roomChannel) {
     roomChannel.send({ type: 'broadcast', event: 'restart', payload: {} });
     broadcastState();
@@ -634,14 +709,19 @@ function restartGame() {
 
 function resign() {
   if (!gameActive) return;
+  
+  // Turn restriction: only resign on your own colour's turn
+  if (myRole === 'host' && game.turn() !== 'w') return;
+  if (myRole === 'guest' && game.turn() !== 'b') return;
+
   const loser = game.turn() === 'w' ? 'White' : 'Black';
   const winner = loser === 'White' ? 'Black' : 'White';
   const msg = `${loser} resigned. ${winner} wins.`;
-  
+
   if (roomChannel && myRole !== 'local') {
     roomChannel.send({ type: 'broadcast', event: 'resign', payload: { message: msg } });
   }
-  
+
   endGame(msg);
 }
 
