@@ -197,50 +197,77 @@ function processMove(source, target) {
   return true;
 }
 
-$('#board').on('mousedown touchstart', '.square-55d63', function (e) {
+const interactHandler = function (e) {
   if (!gameActive) return;
 
-  const square = $(this).attr('data-square');
+  const squareEl = e.target.closest('.square-55d63');
+  if (!squareEl) return;
+
+  const square = squareEl.getAttribute('data-square');
   const turn = game.turn();
   const pieceColor = game.get(square) ? game.get(square).color : null;
 
+  // 1. If we click the same square twice, just deselect
   if (selectedSquare === square) {
     selectedSquare = null;
     clearBoardEffects();
     return;
   }
 
+  // 2. If a square is already selected, try to move to the new clicked square
   if (selectedSquare) {
-    const moved = processMove(selectedSquare, square);
-    if (moved) {
-      board.position(game.fen());
-      highlightPortals();
-      selectedSquare = null;
-      clearBoardEffects();
-      return;
+    // Check if the clicked square is a valid move destination for the selected piece
+    const moves = game.moves({ square: selectedSquare, verbose: true });
+    const isMoveValid = moves.some(m => m.to === square);
+
+    if (isMoveValid) {
+      e.stopPropagation(); // Stop chessboard.js from dragging if we are executing a click move
+      e.preventDefault();
+      
+      const moved = processMove(selectedSquare, square);
+      if (moved) {
+        board.position(game.fen());
+        highlightPortals();
+        selectedSquare = null;
+        clearBoardEffects();
+        return;
+      }
     }
   }
 
+  // 3. Selection logic (select own piece)
   if (pieceColor === turn) {
     selectedSquare = square;
     clearBoardEffects();
-    $(this).addClass('selected-square');
+    
+    // Add visually selected state
+    squareEl.classList.add('selected-square');
 
+    // Highlight destination squares
     const moves = game.moves({ square: square, verbose: true });
     moves.forEach(m => {
-      const el = $(`.square-55d63[data-square="${m.to}"]`);
-      if (m.captured) {
-        if (m.captured === 'k') el.addClass('highlight-danger');
-        else el.addClass('highlight-capture');
-      } else {
-        el.addClass('highlight-move');
+      const el = document.querySelector(`.square-55d63[data-square="${m.to}"]`);
+      if (el) {
+        if (m.captured) {
+          if (m.captured === 'k') el.classList.add('highlight-danger');
+          else el.classList.add('highlight-capture');
+        } else {
+          el.classList.add('highlight-move');
+        }
       }
     });
+
+    // We do NOT stop propagation here, allowing chessboard.js to start a drag if the user holds and drags.
   } else {
+    // Clicked empty square or enemy piece (and it wasn't a valid move)
     selectedSquare = null;
     clearBoardEffects();
   }
-});
+};
+
+const boardContainer = document.getElementById('board');
+boardContainer.addEventListener('mousedown', interactHandler, true);
+boardContainer.addEventListener('touchstart', interactHandler, { passive: false, capture: true });
 
 /* -------------------- POPUP -------------------- */
 
