@@ -1,17 +1,44 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Portal Chess</title>
+  <title>FLUX Chess</title>
 
   <link rel="stylesheet"
     href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
 
   <link rel="stylesheet" href="style.css">
+
 </head>
 
-<body>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const splash = document.getElementById('splash');
 
-  <h2>Portal Chess</h2>
+  if (!splash) return; // safety check
+
+  function dismissSplash() {
+    splash.classList.add('exit');
+
+    setTimeout(() => {
+      splash.classList.add('hidden');
+      document.body.style.overflow = 'auto';
+      splash.remove();
+    }, 600);
+  }
+
+  // Click anywhere on splash
+  splash.addEventListener('click', dismissSplash);
+
+  // Keyboard fallback
+  document.addEventListener('keydown', dismissSplash);
+});
+</script>
+
+<body>
+  <div class="flux-chess">
+  <h2>FLUX</h2>
+  <p>Chess</p>
+</div>
 
   <div id="controls">
     <button onclick="restartGame()">Restart</button>
@@ -34,12 +61,27 @@
     </div>
   </div>
 
+
+<div id="splash" class="flux-chess">
+  <div class="splash-inner">
+    <img src="img/flux-chess-dark.png" alt="FLUX Chess Logo" id="logo" />
+    
+    <div class="text-block">
+      <h2>READY OR NOT</h1>
+      <p class="continue">Click to continue</p>
+    </div>
+  </div>
+</div>
+
+
   <!-- Libraries -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.12.0/chess.min.js"></script>
   <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
   <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
 
   <script src="script.js"></script>
+
+  
 
 </body>
 </html>
