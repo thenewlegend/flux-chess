@@ -2,6 +2,7 @@
   import { gameState } from "$lib/stores/game.svelte.js";
   import { roomState } from "$lib/stores/room.svelte.js";
   import { playFlipSound } from "$lib/chess/sounds.js";
+  import Modal from "$lib/components/Modal.svelte";
 
   const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"];
   const RANKS = [8, 7, 6, 5, 4, 3, 2, 1];
@@ -22,6 +23,7 @@
   const PIECE_CDN = "https://chessboardjs.com/img/chesspieces/wikipedia";
 
   let dragFrom = $state(null);
+  let promotionData = $state(null); // { from, to }
 
   const displayRanks = RANKS;
   const displayFiles = FILES;
@@ -78,16 +80,36 @@
     }
   }
 
-  function attemptMove(from, to) {
+  function attemptMove(from, to, promotion = null) {
     if (roomState.isSpectator) return;
     if (roomState.isOnline && !roomState.isMyTurn) return;
 
+    // Check for promotion if not already provided
+    if (!promotion) {
+      const moves = gameState.getLegalMoves(from);
+      const isPromotionMove = moves.some(m => m.to === to && (m.promotion || (m.flags && m.flags.includes('p'))));
+      
+      if (isPromotionMove) {
+        promotionData = { from, to };
+        return;
+      }
+
+      // Fallback: check piece and rank if chess.js flags are missing
+      const piece = gameState.getPiece(from);
+      if (piece?.type?.toLowerCase() === 'p' && (to[1] === '8' || to[1] === '1')) {
+        if (moves.some(m => m.to === to)) {
+          promotionData = { from, to };
+          return;
+        }
+      }
+    }
+
     if (roomState.isOnline) {
       // Optimistic local move
-      const move = gameState.makeMove(from, to);
+      const move = gameState.makeMove(from, to, promotion || 'q');
       if (move) {
         // Send to server for validation
-        roomState.sendMove(from, to).then((ok) => {
+        roomState.sendMove(from, to, promotion || 'q').then((ok) => {
           if (!ok) {
             // Server rejected — the realtime update will fix state
             console.warn("Move rejected by server");
@@ -95,7 +117,7 @@
         });
       }
     } else {
-      const move = gameState.makeMove(from, to);
+      const move = gameState.makeMove(from, to, promotion || 'q');
       if (move && gameState.autoFlip && gameState.gameActive) {
         setTimeout(() => {
           roomState.flipBoard();
@@ -103,6 +125,12 @@
         }, 600);
       }
     }
+    promotionData = null;
+  }
+
+  function handlePromotionSelect(pieceType) {
+    if (!promotionData) return;
+    attemptMove(promotionData.from, promotionData.to, pieceType);
   }
 
   function handleDragStart(e, square) {
@@ -212,6 +240,27 @@
     {/each}
   </div>
 </div>
+
+<Modal open={!!promotionData} title="Select Promotion" onclose={() => promotionData = null}>
+  <div class="promotion-options">
+    <button class="btn tonal promotion-btn" onclick={() => handlePromotionSelect('q')}>
+      <img src={getPieceImage({ type: 'q', color: gameState.turn })} alt="Queen" />
+      <span>Queen</span>
+    </button>
+    <button class="btn tonal promotion-btn" onclick={() => handlePromotionSelect('r')}>
+      <img src={getPieceImage({ type: 'r', color: gameState.turn })} alt="Rook" />
+      <span>Rook</span>
+    </button>
+    <button class="btn tonal promotion-btn" onclick={() => handlePromotionSelect('b')}>
+      <img src={getPieceImage({ type: 'b', color: gameState.turn })} alt="Bishop" />
+      <span>Bishop</span>
+    </button>
+    <button class="btn tonal promotion-btn" onclick={() => handlePromotionSelect('n')}>
+      <img src={getPieceImage({ type: 'n', color: gameState.turn })} alt="Knight" />
+      <span>Knight</span>
+    </button>
+  </div>
+</Modal>
 
 <style>
   .board-container {
@@ -347,5 +396,24 @@
   .square.portal.highlight-capture::after,
   .square.portal.highlight-danger::after {
     border: 3px solid var(--portal-color);
+  }
+
+  .promotion-options {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    padding: 8px;
+  }
+
+  .promotion-btn {
+    flex-direction: column;
+    padding: 16px;
+    height: auto;
+    gap: 8px;
+  }
+
+  .promotion-btn img {
+    width: 48px;
+    height: 48px;
   }
 </style>
