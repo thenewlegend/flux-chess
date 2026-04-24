@@ -164,6 +164,7 @@ class RoomState {
 					// Toast notifications
 					if (this.isMyTurn && gameState.gameActive) {
 						if (gameState.isCheck) {
+							import('$lib/chess/sounds.js').then(m => m.playCheckSound());
 							this.showToast('You are in check!');
 						} else {
 							this.showToast('Your turn');

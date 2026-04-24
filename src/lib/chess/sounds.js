@@ -7,7 +7,8 @@ const SOUND_URLS = {
 	move: '/sounds/move.mp3',
 	capture: '/sounds/capture.mp3',
 	end: '/sounds/game-end.mp3',
-	flip: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3'
+	flip: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3',
+	check: 'https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/notification.mp3'
 };
 
 /** @type {Map<string, HTMLAudioElement>} */
@@ -44,6 +45,14 @@ export function playFlipSound() {
 	if (audio) {
 		audio.currentTime = 0;
 		audio.volume = 0.5;
+		audio.play().catch(() => {});
+	}
+}
+
+export function playCheckSound() {
+	const audio = getAudio('check');
+	if (audio) {
+		audio.currentTime = 0;
 		audio.play().catch(() => {});
 	}
 }

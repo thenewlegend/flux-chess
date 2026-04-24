@@ -4,7 +4,7 @@
  */
 import { Chess } from 'chess.js';
 import { generatePortalPairs, getRandomInterval, applyPortalSwap, getPortalCharge } from '$lib/chess/portals.js';
-import { playMoveSound, playEndSound } from '$lib/chess/sounds.js';
+import { playMoveSound, playEndSound, playCheckSound } from '$lib/chess/sounds.js';
 import { vibrateMove, vibrateCapture, vibrateCheck, vibrateSwap } from '$lib/utils/haptics.js';
 
 class GameState {
@@ -280,6 +280,7 @@ class GameState {
 			this.endGame(reason);
 		} else if (this.isCheck) {
 			vibrateCheck();
+			playCheckSound();
 			this.statusText = `${color} is in check.`;
 		} else {
 			this.statusText = `${color} to move.`;
