@@ -38,6 +38,7 @@
 
 	function startLocal() {
 		roomState.role = 'local';
+		roomState.orientation = 'white';
 		gameState.reset();
 		screen = 'game';
 	}
@@ -73,6 +74,7 @@
 		if (roomState.isOnline) {
 			roomState.restart();
 		} else {
+			roomState.orientation = 'white';
 			gameState.reset();
 		}
 		if (restartTimer) clearTimeout(restartTimer);

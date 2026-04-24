@@ -1,6 +1,7 @@
 <script>
 	import { gameState } from '$lib/stores/game.svelte.js';
 	import { roomState } from '$lib/stores/room.svelte.js';
+	import { playFlipSound } from '$lib/chess/sounds.js';
 
 	const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 	const RANKS = [8, 7, 6, 5, 4, 3, 2, 1];
@@ -14,8 +15,8 @@
 
 	let dragFrom = $state(null);
 
-	const displayRanks = $derived(roomState.orientation === 'white' ? RANKS : [...RANKS].reverse());
-	const displayFiles = $derived(roomState.orientation === 'white' ? FILES : [...FILES].reverse());
+	const displayRanks = RANKS;
+	const displayFiles = FILES;
 
 	function getPieceImage(piece) {
 		if (!piece) return null;
@@ -83,7 +84,13 @@
 				});
 			}
 		} else {
-			gameState.makeMove(from, to);
+			const move = gameState.makeMove(from, to);
+			if (move && gameState.autoFlip && gameState.gameActive) {
+				setTimeout(() => {
+					roomState.flipBoard();
+					playFlipSound();
+				}, 600);
+			}
 		}
 	}
 
@@ -125,7 +132,10 @@
 </script>
 
 <div class="board-container">
-	<div class="chess-board">
+	<div 
+		class="chess-board"
+		style:transform={roomState.orientation === 'black' ? 'rotate(180deg)' : 'rotate(0deg)'}
+	>
 		{#each displayRanks as rank}
 			{#each displayFiles as file}
 				{@const square = `${file}${rank}`}
@@ -158,6 +168,7 @@
 							alt="{piece.color === 'w' ? 'White' : 'Black'} {piece.type}"
 							class="piece-img"
 							draggable="true"
+							style:transform={roomState.orientation === 'black' ? 'rotate(-180deg)' : 'rotate(0deg)'}
 							ondragstart={(e) => handleDragStart(e, square)}
 							ondragend={handleDragEnd}
 						/>
@@ -184,6 +195,7 @@
 		border-radius: 4px;
 		overflow: hidden;
 		box-shadow: var(--md-elevation-3);
+		transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 	}
 
 	.square {
@@ -204,11 +216,11 @@
 		object-fit: contain;
 		pointer-events: auto;
 		z-index: 10;
-		transition: transform 0.1s ease;
+		transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1), scale 0.1s ease;
 	}
 
 	.piece-img:active {
-		transform: scale(1.1);
+		scale: 1.1;
 	}
 
 	/* Selection */

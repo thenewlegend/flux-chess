@@ -1,6 +1,7 @@
 <script>
 	import { gameState } from '$lib/stores/game.svelte.js';
 	import { roomState } from '$lib/stores/room.svelte.js';
+	import { playFlipSound } from '$lib/chess/sounds.js';
 
 	function handleRestart() {
 		if (roomState.isOnline) {
@@ -26,6 +27,7 @@
 
 	function handleFlip() {
 		roomState.flipBoard();
+		playFlipSound();
 	}
 
 	const canRestart = $derived(roomState.role === 'local' || roomState.isHost);
@@ -51,6 +53,21 @@
 	<button class="btn tonal" onclick={handleFlip} title="Flip Board">
 		<span class="material-symbols-rounded">flip</span> Flip
 	</button>
+
+	{#if roomState.role === 'local'}
+		<button 
+			class="btn" 
+			class:filled={gameState.autoFlip}
+			class:tonal={!gameState.autoFlip}
+			onclick={() => gameState.autoFlip = !gameState.autoFlip} 
+			title="Auto Flip after each turn"
+		>
+			<span class="material-symbols-rounded">
+				{gameState.autoFlip ? 'sync' : 'sync_disabled'}
+			</span> 
+			Auto Flip
+		</button>
+	{/if}
 </div>
 
 <style>

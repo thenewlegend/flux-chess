@@ -19,6 +19,7 @@ class GameState {
 	statusText = $state('White to move.');
 	popupShown = $state(false);
 	selectedSquare = $state(null);
+	autoFlip = $state(false);
 	/** @type {Array<{square: string, type: 'move'|'capture'|'danger'}>} */
 	highlights = $state([]);
 

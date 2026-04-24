@@ -6,7 +6,8 @@
 const SOUND_URLS = {
 	move: '/sounds/move.mp3',
 	capture: '/sounds/capture.mp3',
-	end: '/sounds/game-end.mp3'
+	end: '/sounds/game-end.mp3',
+	flip: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3'
 };
 
 /** @type {Map<string, HTMLAudioElement>} */
@@ -34,6 +35,15 @@ export function playEndSound() {
 	const audio = getAudio('end');
 	if (audio) {
 		audio.currentTime = 0;
+		audio.play().catch(() => {});
+	}
+}
+
+export function playFlipSound() {
+	const audio = getAudio('flip');
+	if (audio) {
+		audio.currentTime = 0;
+		audio.volume = 0.5;
 		audio.play().catch(() => {});
 	}
 }
