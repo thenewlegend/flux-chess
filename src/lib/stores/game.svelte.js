@@ -268,7 +268,12 @@ class GameState {
 			const winner = this.turn === 'w' ? 'Black' : 'White';
 			this.endGame(`Checkmate! ${winner} wins.`);
 		} else if (this.isDraw) {
-			this.endGame('Draw!');
+			let reason = 'Draw!';
+			if (this.#chess.isStalemate()) reason = 'Draw by Stalemate';
+			else if (this.#chess.isThreefoldRepetition()) reason = 'Draw by Repetition';
+			else if (this.#chess.isInsufficientMaterial()) reason = 'Draw by Insufficient Material';
+			else if (this.#chess.isDraw()) reason = 'Draw (50-move rule or other)';
+			this.endGame(reason);
 		} else if (this.isCheck) {
 			vibrateCheck();
 			this.statusText = `${color} is in check.`;

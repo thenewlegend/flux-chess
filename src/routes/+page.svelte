@@ -185,8 +185,9 @@
 
 <!-- Restart Popup -->
 <Modal open={restartPopup} title="Game Ended" onclose={closePopup}>
+	<p class="endgame-status">{gameState.statusText}</p>
 	{#if roomState.role === 'guest' || roomState.isSpectator}
-		<p>Game Over. Waiting for host to restart...</p>
+		<p>Waiting for host to restart...</p>
 	{:else}
 		<p>Restart now?</p>
 		<div class="modal-actions">
@@ -305,5 +306,12 @@
 	p {
 		color: var(--md-sys-color-on-surface-variant);
 		line-height: 1.5;
+	}
+
+	.endgame-status {
+		font-size: 1.25rem;
+		font-weight: 600;
+		color: var(--md-sys-color-primary);
+		margin-bottom: 8px;
 	}
 </style>
