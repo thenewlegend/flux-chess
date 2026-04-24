@@ -213,15 +213,20 @@ class RoomState {
 		});
 	}
 
-	/** Clean up */
+	/** Clean up and clear session */
 	disconnect() {
+		this.exit();
+		this.clearSession();
+	}
+
+	/** Exit mid-game but keep session for re-join */
+	exit() {
 		if (this.channel) {
 			supabaseClient.removeChannel(this.channel);
 			this.channel = null;
 		}
 		this.code = null;
 		this.role = 'local';
-		this.clearSession();
 	}
 
 	flipBoard() {

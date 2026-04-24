@@ -14,7 +14,6 @@
 	function handleResign() {
 		if (!gameState.gameActive) return;
 		if (roomState.isOnline && !roomState.isMyTurn) return;
-		if (roomState.isSpectator) return;
 
 		if (roomState.isOnline) {
 			roomState.resign();
@@ -36,7 +35,15 @@
 		playFlipSound();
 	}
 
-	const canRestart = $derived(roomState.role === 'local' || roomState.isHost);
+	function handleExit() {
+		if (confirm('Leave match? (You can rejoin later)')) {
+			roomState.exit();
+		}
+	}
+
+	const isOnline = $derived(roomState.isOnline);
+	const isHost = $derived(roomState.isHost);
+	const canRestart = $derived(roomState.role === 'local' || isHost);
 	const canResign = $derived(
 		gameState.gameActive &&
 		(roomState.role === 'local' || roomState.isMyTurn)
@@ -59,12 +66,18 @@
 		<span class="material-symbols-rounded">flip</span> Flip
 	</button>
 
-	{#if roomState.isHost}
+	{#if isOnline}
+		<button class="btn tonal" onclick={handleExit} title="Leave match (can rejoin later)">
+			<span class="material-symbols-rounded">logout</span> Exit Match
+		</button>
+	{/if}
+
+	{#if isHost}
 		<button class="btn tonal" onclick={handleTerminate} 
 			style="color: var(--md-sys-color-error); border-color: var(--md-sys-color-error-container)"
-			title="Terminate Room (Host Only)"
+			title="Terminate Room permanently for everyone"
 		>
-			<span class="material-symbols-rounded">cancel</span> Terminate
+			<span class="material-symbols-rounded">delete_forever</span> Terminate Room
 		</button>
 	{/if}
 

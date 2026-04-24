@@ -107,20 +107,7 @@
 		isMe: isOnline && ((roomState.isHost && !bottomIsHost) || (roomState.role === 'guest' && bottomIsHost))
 	});
 
-	// Listen for realtime game start (host waiting for guest)
-	$effect(() => {
-		if (roomState.isHost && screen === 'splash' && roomState.channel) {
-			// When a guest joins and game state is synced, transition to game
-			const unsubCheck = $effect.root(() => {
-				$effect(() => {
-					// This will trigger when game state is loaded via realtime
-					if (gameState.gameActive && roomState.code) {
-						screen = 'game';
-					}
-				});
-			});
-		}
-	});
+
 </script>
 
 {#if screen === 'splash'}
@@ -151,6 +138,8 @@
 	</div>
 {:else}
 	<!-- Game Screen -->
+
+
 	<main class="app-main">
 		<div class="left-panel">
 			<StatusCard />
@@ -313,4 +302,6 @@
 		color: var(--md-sys-color-primary);
 		margin-bottom: 8px;
 	}
+
+
 </style>

@@ -1,5 +1,6 @@
 <script>
 	import { roomState } from '$lib/stores/room.svelte.js';
+	import { gameState } from '$lib/stores/game.svelte.js';
 	import { onMount } from 'svelte';
 
 	let { onBack, onRoomCreated, onRoomJoined, onRejoinComplete } = $props();
@@ -25,7 +26,6 @@
 				
 				if (canRejoin) {
 					discoveredSession = { ...session, data };
-					await handleRejoin();
 				} else {
 					console.warn('[Lobby] Role mismatch or room full. Stored:', session.role, 'Server:', data.currentUserRole);
 					roomState.clearSession();
@@ -106,9 +106,30 @@
 			// Fallback handled silently
 		}
 	}
+	$effect(() => {
+		if (waiting && gameState.gameActive) {
+			onRejoinComplete?.();
+		}
+	});
 </script>
 
 <div class="lobby-menu" style="animation: introReveal 0.4s ease forwards;">
+	{#if discoveredSession}
+		<div class="rejoin-card">
+			<div class="rejoin-info">
+				<span class="material-symbols-rounded">history</span>
+				<div class="rejoin-text">
+					<span class="rejoin-title">Active Match Found</span>
+					<span class="rejoin-subtitle">Room {discoveredSession.code} • {discoveredSession.role.toUpperCase()}</span>
+				</div>
+			</div>
+			<div class="rejoin-actions">
+				<button class="btn text-btn sm" onclick={handleDismissSession}>Dismiss</button>
+				<button class="btn filled sm" onclick={handleRejoin}>Rejoin</button>
+			</div>
+		</div>
+		<div class="lobby-divider rejoin-divider">OR</div>
+	{/if}
 
 
 	{#if verifyingSession}
