@@ -5,13 +5,13 @@
 </script>
 
 <header class="app-header">
-	<div class="header-title">
+	<a href="/" class="header-title" style="text-decoration: none; color: inherit;">
 		<img src={theme.logoSrc} alt="FLUX Logo" class="app-logo" />
 		<div class="header-text">
 			<h2>FLUX</h2>
 			<p>Chess</p>
 		</div>
-	</div>
+	</a>
 	<div class="header-actions">
 		<button class="icon-button" onclick={onTutorial} aria-label="Tutorial">
 			<span class="material-symbols-rounded">help</span>
