@@ -9,37 +9,48 @@ import { Chess } from 'chess.js';
  * @returns {{ valid: boolean, fen?: string, move?: object, error?: string }}
  */
 export function validateMove(fen, from, to, promotion = 'q') {
-	const chess = new Chess(fen);
+	let chess;
+	try {
+		chess = new Chess(fen);
+	} catch {
+		// Fallback for invalid FENs (e.g. missing king)
+		// We still need to check if a king capture is possible
+		if (_canAttack(fen, from, to)) {
+			// Handled below in the king capture logic
+		} else {
+			return { valid: false, error: 'Illegal move' };
+		}
+	}
+	
 	try {
 		const move = chess.move({ from, to, promotion });
 		return { valid: true, fen: chess.fen(), move };
 	} catch {
 		// Check if it's a valid king capture (not legal in standard chess)
 		if (_canAttack(fen, from, to)) {
-			const piece = chess.get(from);
-			const target = chess.get(to);
-			if (target && target.type === 'k') {
-				// Manually update FEN: move piece, remove king
-				const fenParts = fen.split(' ');
-				const boardRows = fenParts[0].split('/');
-				const expand = (r) => r.replace(/\d/g, n => '1'.repeat(parseInt(n))).split('');
-				const compress = (cells) => cells.join('').replace(/1+/g, m => m.length);
-				const rows = boardRows.map(expand);
-				
-				const f1 = from.charCodeAt(0) - 97, r1 = 8 - parseInt(from[1]);
-				const f2 = to.charCodeAt(0) - 97, r2 = 8 - parseInt(to[1]);
-				
-				rows[r2][f2] = piece.type; // Move piece
-				rows[r1][f1] = '1'; // Empty source
-				
-				fenParts[0] = rows.map(compress).join('/');
-				// Flip turn
-				fenParts[1] = fenParts[1] === 'w' ? 'b' : 'w';
+			// Manual parse of FEN to get piece
+			const parts = fen.split(' ');
+			const boardRows = parts[0].split('/');
+			const expand = (r) => r.replace(/\d/g, n => '1'.repeat(parseInt(n))).split('');
+			const compress = (cells) => cells.join('').replace(/1+/g, m => m.length);
+			const rows = boardRows.map(expand);
+			
+			const f1 = from.charCodeAt(0) - 97, r1 = 8 - parseInt(from[1]);
+			const f2 = to.charCodeAt(0) - 97, r2 = 8 - parseInt(to[1]);
+			
+			const pieceChar = rows[r1][f1];
+			const targetChar = rows[r2][f2];
+			
+			if (targetChar.toLowerCase() === 'k') {
+				rows[r2][f2] = pieceChar;
+				rows[r1][f1] = '1';
+				parts[0] = rows.map(compress).join('/');
+				parts[1] = parts[1] === 'w' ? 'b' : 'w';
 				
 				return { 
 					valid: true, 
-					fen: fenParts.join(' '), 
-					move: { from, to, captured: 'k', color: piece.color } 
+					fen: parts.join(' '), 
+					move: { from, to, captured: 'k', color: pieceChar === pieceChar.toUpperCase() ? 'w' : 'b' } 
 				};
 			}
 		}

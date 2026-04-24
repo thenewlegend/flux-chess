@@ -8,25 +8,53 @@ import { playMoveSound, playEndSound } from '$lib/chess/sounds.js';
 import { vibrateMove, vibrateCapture, vibrateCheck, vibrateSwap } from '$lib/utils/haptics.js';
 
 class GameState {
-	chess = $state(new Chess());
+	#chess = new Chess();
+	// Primary reactive state
+	fen = $state(this.#chess.fen());
 	moveCount = $state(0);
 	gameActive = $state(true);
 	portalPairs = $state([]);
 	swapInterval = $state(getRandomInterval());
 	movesUntilSwap = $state(this.swapInterval);
-	statusText = $state('Ready to play.');
+	statusText = $state('White to move.');
 	popupShown = $state(false);
 	selectedSquare = $state(null);
 	/** @type {Array<{square: string, type: 'move'|'capture'|'danger'}>} */
 	highlights = $state([]);
 
-	get fen() { return this.chess.fen(); }
-	get turn() { return this.chess.turn(); }
+	#safeLoad(fen) {
+		try {
+			if (!fen) return false;
+			this.#chess.load(fen);
+			return true;
+		} catch (e) {
+			return false;
+		}
+	}
+
+	// Getters that depend on this.fen for reactivity
+	get turn() { 
+		const f = this.fen;
+		this.#safeLoad(f);
+		return this.#chess.turn(); 
+	}
 	get turnColor() { return this.turn === 'w' ? 'White' : 'Black'; }
-	get isCheck() { return this.chess.isCheck(); }
-	get isCheckmate() { return this.chess.isCheckmate(); }
-	get isDraw() { return this.chess.isDraw(); }
-	get isGameOver() { return !this.gameActive || this.chess.isGameOver(); }
+	get isCheck() { 
+		if (!this.gameActive) return false;
+		return this.#safeLoad(this.fen) ? this.#chess.isCheck() : false; 
+	}
+	get isCheckmate() { 
+		if (!this.gameActive) return false;
+		return this.#safeLoad(this.fen) ? this.#chess.isCheckmate() : false; 
+	}
+	get isDraw() { 
+		if (!this.gameActive) return false;
+		return this.#safeLoad(this.fen) ? this.#chess.isDraw() : false; 
+	}
+	get isGameOver() { 
+		if (!this.gameActive) return true;
+		return this.#safeLoad(this.fen) ? this.#chess.isGameOver() : true; 
+	}
 
 	get portalCharge() {
 		return getPortalCharge(this.swapInterval, this.movesUntilSwap);
@@ -38,62 +66,99 @@ class GameState {
 
 	/** Get piece at a square */
 	getPiece(square) {
-		try {
-			return this.chess.get(square);
-		} catch {
-			return null;
+		const f = this.fen;
+		if (this.#safeLoad(f)) {
+			return this.#chess.get(square);
 		}
+		// If load failed (missing king), manually parse FEN for pieces
+		return this._manualGetPiece(square);
+	}
+
+	_manualGetPiece(square) {
+		const parts = this.fen.split(' ');
+		const rows = parts[0].split('/');
+		const fileIdx = square.charCodeAt(0) - 97;
+		const rankIdx = 8 - parseInt(square[1]);
+		const row = rows[rankIdx].replace(/\d/g, n => '1'.repeat(parseInt(n)));
+		const char = row[fileIdx];
+		if (char === '1') return null;
+		return {
+			type: char.toLowerCase(),
+			color: char === char.toUpperCase() ? 'w' : 'b'
+		};
 	}
 
 	/** Get legal moves for a square, including king captures */
 	getLegalMoves(square) {
 		if (!this.gameActive) return [];
+		const f = this.fen;
+		const valid = this.#safeLoad(f);
+		const moves = valid ? this.#chess.moves({ square, verbose: true }) : [];
+		
 		try {
-			const moves = this.chess.moves({ square, verbose: true });
-			
-			// In portal chess, we allow taking the king if it's reachable
-			const piece = this.chess.get(square);
+			const piece = this.getPiece(square);
 			if (!piece) return moves;
 
 			const opponentColor = piece.color === 'w' ? 'b' : 'w';
-			const board = this.chess.board();
-			for (let r = 0; r < 8; r++) {
-				for (let c = 0; c < 8; c++) {
-					const target = board[r][c];
-					if (target && target.type === 'k' && target.color === opponentColor) {
-						const targetSq = String.fromCharCode(97 + c) + (8 - r);
-						if (this._canAttack(square, targetSq)) {
-							moves.push({ from: square, to: targetSq, captured: 'k', color: piece.color });
+			const boardFen = this.fen.split(' ')[0];
+			const kingChar = opponentColor === 'k' ? 'k' : (opponentColor === 'w' ? 'K' : 'k');
+			
+			if (boardFen.includes(kingChar)) {
+				// Find king position
+				const rows = boardFen.split('/');
+				for (let r = 0; r < 8; r++) {
+					const row = rows[r].replace(/\d/g, n => '1'.repeat(parseInt(n)));
+					for (let c = 0; c < 8; c++) {
+						if (row[c] === kingChar) {
+							const targetSq = String.fromCharCode(97 + c) + (8 - r);
+							if (this._canAttack(square, targetSq)) {
+								// Only add if not already there
+								if (!moves.some(m => m.to === targetSq)) {
+									moves.push({ from: square, to: targetSq, captured: 'k', color: piece.color });
+								}
+							}
 						}
 					}
 				}
 			}
-			return moves;
-		} catch (e) {
-			return [];
-		}
+		} catch (e) {}
+		return moves;
 	}
 
 	/** Simple check if square A can attack square B (ignoring check) */
 	_canAttack(from, to) {
 		try {
-			const temp = new Chess(this.fen);
-			const piece = temp.get(from);
-			if (!piece) return false;
-			
-			const fenParts = temp.fen().split(' ');
+			const temp = new Chess();
+			// Setup a safe board for attack testing
+			const fenParts = this.fen.split(' ');
 			const boardRows = fenParts[0].split('/');
 			const toFile = to.charCodeAt(0) - 97;
 			const toRank = 8 - parseInt(to[1]);
-			
 			const expand = (r) => r.replace(/\d/g, n => '1'.repeat(parseInt(n))).split('');
 			const compress = (cells) => cells.join('').replace(/1+/g, m => m.length);
-			
 			const rows = boardRows.map(expand);
+			
+			const piece = this.getPiece(from);
+			if (!piece) return false;
+
+			// Replace target with opponent pawn to make it "capturable" for standard chess.js
 			rows[toRank][toFile] = piece.color === 'w' ? 'p' : 'P';
+			
+			// Ensure both kings exist in the test board to avoid load() throwing
+			let whiteKingFound = false, blackKingFound = false;
+			for(let r=0; r<8; r++) {
+				for(let c=0; c<8; c++) {
+					if (rows[r][c] === 'K') whiteKingFound = true;
+					if (rows[r][c] === 'k') blackKingFound = true;
+				}
+			}
+			if (!whiteKingFound) rows[0][0] = rows[0][0] === '1' ? 'K' : rows[0][0];
+			if (!blackKingFound) rows[7][7] = rows[7][7] === '1' ? 'k' : rows[7][7];
+
 			fenParts[0] = rows.map(compress).join('/');
 			
-			const attackTest = new Chess(fenParts.join(' '));
+			const attackTest = new Chess();
+			attackTest.load(fenParts.join(' '));
 			const moves = attackTest.moves({ square: from, verbose: true });
 			return moves.some(m => m.to === to);
 		} catch {
@@ -125,15 +190,18 @@ class GameState {
 	 */
 	makeMove(from, to, promotion = 'q') {
 		if (!this.gameActive) return null;
+		this.#safeLoad(this.fen);
 		let move;
 		try {
-			move = this.chess.move({ from, to, promotion });
+			move = this.#chess.move({ from, to, promotion });
+			this.fen = this.#chess.fen();
 		} catch {
 			if (this._canAttack(from, to)) {
 				const target = this.getPiece(to);
 				if (target && target.type === 'k') {
 					move = { from, to, captured: 'k', color: this.turn };
-					const temp = new Chess(this.fen);
+					const temp = new Chess();
+					temp.load(this.fen);
 					const piece = temp.get(from);
 					const fenParts = temp.fen().split(' ');
 					const boardRows = fenParts[0].split('/');
@@ -146,15 +214,12 @@ class GameState {
 					rows[r1][f1] = '1';
 					fenParts[0] = rows.map(compress).join('/');
 					fenParts[1] = fenParts[1] === 'w' ? 'b' : 'w';
-					this.chess.load(fenParts.join(' '));
+					this.fen = fenParts.join(' ');
 				}
 			}
 		}
 
 		if (!move) return null;
-
-		// Trigger Svelte 5 reactivity for the chess instance
-		this.chess = this.chess;
 
 		if (this.isCheckmate || this.isDraw || move.captured === 'k') {
 			playEndSound();
@@ -183,14 +248,12 @@ class GameState {
 	_applySwap() {
 		vibrateSwap();
 		const newFen = applyPortalSwap(this.fen, this.portalPairs);
-		this.chess.load(newFen);
-		this.chess = this.chess;
+		this.fen = newFen; 
 		this.swapInterval = getRandomInterval();
 		this.movesUntilSwap = this.swapInterval;
 
-		const board = this.chess.board().flat();
-		const whiteKing = board.some(p => p && p.type === 'k' && p.color === 'w');
-		const blackKing = board.some(p => p && p.type === 'k' && p.color === 'b');
+		const whiteKing = this.fen.split(' ')[0].includes('K');
+		const blackKing = this.fen.split(' ')[0].includes('k');
 		if (!whiteKing || !blackKing) {
 			const winner = whiteKing ? 'White' : 'Black';
 			this.endGame(`${winner} wins (king lost via portal)`);
@@ -222,7 +285,8 @@ class GameState {
 	}
 
 	reset() {
-		this.chess = new Chess();
+		this.#chess = new Chess();
+		this.fen = this.#chess.fen();
 		this.moveCount = 0;
 		this.gameActive = true;
 		this.popupShown = false;
@@ -239,8 +303,7 @@ class GameState {
 
 	loadState(data) {
 		if (data.fen) {
-			this.chess.load(data.fen);
-			this.chess = this.chess;
+			this.fen = data.fen;
 		}
 		if (data.moveCount !== undefined) this.moveCount = data.moveCount;
 		if (data.movesUntilSwap !== undefined) this.movesUntilSwap = data.movesUntilSwap;
