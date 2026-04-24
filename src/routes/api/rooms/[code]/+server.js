@@ -2,8 +2,9 @@ import { json } from '@sveltejs/kit';
 import { supabase } from '$lib/server/supabase.js';
 
 /** GET /api/rooms/[code] — Fetch room state */
-export async function GET({ params }) {
+export async function GET({ params, locals }) {
 	const { code } = params;
+	const playerId = locals.playerId;
 
 	const { data, error } = await supabase
 		.from('rooms')
@@ -16,11 +17,18 @@ export async function GET({ params }) {
 		return json({ error: 'Room not found' }, { status: 404 });
 	}
 
+	let currentUserRole = 'spectator';
+	if (data.host_player_id === playerId) currentUserRole = 'host';
+	else if (data.guest_player_id === playerId) currentUserRole = 'guest';
+
+	console.log(`[API] Room ${code} - Player ${playerId} - Assigned Role: ${currentUserRole}`);
+
 	return json({
 		code: data.code,
 		game_state: data.game_state,
 		host_color: data.host_color,
 		hasHost: !!data.host_player_id,
-		hasGuest: !!data.guest_player_id
+		hasGuest: !!data.guest_player_id,
+		currentUserRole
 	});
 }

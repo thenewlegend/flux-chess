@@ -9,6 +9,7 @@
 	const gColorName = $derived(hostColor === 'w' ? 'Black' : 'White');
 	const hasHost = $derived(roomData?.hasHost);
 	const hasGuest = $derived(roomData?.hasGuest);
+	const currentUserRole = $derived(roomData?.currentUserRole);
 
 	async function selectRole(role) {
 		// If both players exist and role is not spectator, force spectator
@@ -36,19 +37,19 @@
 
 		<div class="role-grid">
 			<button class="role-card host" onclick={() => selectRole('host')}
-				disabled={hasHost && roomData?.game_state}>
+				disabled={hasHost && currentUserRole !== 'host'}>
 				<span class="material-symbols-rounded">person</span>
 				<div class="role-details">
-					<span class="role-name">HOST</span>
+					<span class="role-name">{currentUserRole === 'host' ? 'REJOIN AS HOST' : 'HOST'}</span>
 					<span class="role-color">Plays as {hColorName}</span>
 				</div>
 			</button>
 
 			<button class="role-card guest" onclick={() => selectRole('guest')}
-				disabled={hasHost && hasGuest}>
+				disabled={hasGuest && currentUserRole !== 'guest'}>
 				<span class="material-symbols-rounded">person_add</span>
 				<div class="role-details">
-					<span class="role-name">GUEST</span>
+					<span class="role-name">{currentUserRole === 'guest' ? 'REJOIN AS GUEST' : 'GUEST'}</span>
 					<span class="role-color">Plays as {gColorName}</span>
 				</div>
 			</button>

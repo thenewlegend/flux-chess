@@ -1,5 +1,6 @@
 <script>
 	import { roomState } from '$lib/stores/room.svelte.js';
+	import { onMount } from 'svelte';
 
 	let { onBack, onRoomCreated, onRoomJoined } = $props();
 
@@ -9,6 +10,61 @@
 	let waiting = $state(false);
 	let joining = $state(false);
 	let copyIcon = $state('content_copy');
+
+	let discoveredSession = $state(null);
+	let verifyingSession = $state(false);
+
+	onMount(async () => {
+		const session = roomState.getStoredSession();
+		if (session) {
+			console.log('[Lobby] Found stored session:', session);
+			verifyingSession = true;
+			try {
+				const data = await roomState.joinRoom(session.code);
+				console.log('[Lobby] Room data keys:', Object.keys(data));
+				console.log('[Lobby] currentUserRole from server:', data.currentUserRole);
+				
+				const canRejoin = (data.currentUserRole === session.role) || (session.role === 'spectator');
+				
+				if (canRejoin) {
+					discoveredSession = { ...session, data };
+				} else {
+					console.warn('[Lobby] Role mismatch or room full. Stored:', session.role, 'Server:', data.currentUserRole);
+					roomState.clearSession();
+				}
+			} catch (e) {
+				console.error('[Lobby] Discovery error:', e);
+				// Only clear if room is explicitly gone
+				if (e.message?.includes('not found')) {
+					roomState.clearSession();
+				}
+			} finally {
+				verifyingSession = false;
+			}
+		}
+	});
+
+	async function handleRejoin() {
+		if (!discoveredSession) return;
+		try {
+			// Pre-load game state before entering
+			if (discoveredSession.data.game_state) {
+				const { gameState } = await import('$lib/stores/game.svelte.js');
+				gameState.loadState(discoveredSession.data.game_state);
+			}
+			await roomState.enterWithRole(discoveredSession.role);
+			onRoomJoined?.(discoveredSession.code, discoveredSession.data);
+		} catch (e) {
+			console.error('[Lobby] Rejoin failed:', e);
+			joinError = 'Failed to rejoin session.';
+			discoveredSession = null;
+		}
+	}
+
+	function handleDismissSession() {
+		roomState.clearSession();
+		discoveredSession = null;
+	}
 
 	async function handleCreate() {
 		try {
@@ -51,6 +107,30 @@
 </script>
 
 <div class="lobby-menu" style="animation: introReveal 0.4s ease forwards;">
+	{#if discoveredSession}
+		<div class="rejoin-card">
+			<div class="rejoin-info">
+				<span class="material-symbols-rounded">history</span>
+				<div class="rejoin-text">
+					<span class="rejoin-title">Active Match Found</span>
+					<span class="rejoin-subtitle">Room {discoveredSession.code} • {discoveredSession.role.toUpperCase()}</span>
+				</div>
+			</div>
+			<div class="rejoin-actions">
+				<button class="btn text-btn sm" onclick={handleDismissSession}>Dismiss</button>
+				<button class="btn filled sm" onclick={handleRejoin}>Rejoin</button>
+			</div>
+		</div>
+		<div class="lobby-divider rejoin-divider">OR</div>
+	{/if}
+
+	{#if verifyingSession}
+		<div class="verifying-session">
+			<div class="spinner"></div>
+			<span>Checking for active sessions...</span>
+		</div>
+	{/if}
+
 	<div class="lobby-section">
 		<h3>Host a Game</h3>
 		<button class="btn filled main-btn" onclick={handleCreate} disabled={waiting}>
@@ -174,5 +254,84 @@
 	.back-btn {
 		margin-top: 32px;
 		width: 100%;
+	}
+
+	.rejoin-card {
+		background: var(--md-sys-color-primary-container);
+		color: var(--md-sys-color-on-primary-container);
+		padding: 16px;
+		border-radius: 20px;
+		width: 100%;
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+		margin-bottom: 8px;
+		border: 1px solid var(--md-sys-color-primary);
+		box-shadow: var(--md-elevation-2);
+	}
+
+	.rejoin-info {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+	}
+
+	.rejoin-info .material-symbols-rounded {
+		font-size: 32px;
+		color: var(--md-sys-color-primary);
+	}
+
+	.rejoin-text {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.rejoin-title {
+		font-weight: 700;
+		font-size: 1rem;
+	}
+
+	.rejoin-subtitle {
+		font-size: 0.85rem;
+		opacity: 0.8;
+	}
+
+	.rejoin-actions {
+		display: flex;
+		justify-content: flex-end;
+		gap: 8px;
+	}
+
+	.btn.sm {
+		padding: 6px 16px;
+		font-size: 0.85rem;
+		min-height: 36px;
+	}
+
+	.rejoin-divider {
+		margin: 16px 0;
+		opacity: 0.5;
+	}
+
+	.verifying-session {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		padding: 12px;
+		color: var(--md-sys-color-on-surface-variant);
+		font-size: 0.9rem;
+	}
+
+	.spinner {
+		width: 20px;
+		height: 20px;
+		border: 2px solid var(--md-sys-color-primary);
+		border-top-color: transparent;
+		border-radius: 50%;
+		animation: spin 0.8s linear infinite;
+	}
+
+	@keyframes spin {
+		to { transform: rotate(360deg); }
 	}
 </style>

@@ -50,6 +50,7 @@ class RoomState {
 		this.hostColor = 'w';
 		this.orientation = 'white';
 		gameState.reset();
+		this.persistSession();
 		this._subscribeRealtime();
 		return data.code;
 	}
@@ -96,6 +97,7 @@ class RoomState {
 			this.orientation = this.hostColor === 'w' ? 'black' : 'white';
 		}
 
+		this.persistSession();
 		this._subscribeRealtime();
 	}
 
@@ -185,6 +187,7 @@ class RoomState {
 		}
 		this.code = null;
 		this.role = 'local';
+		this.clearSession();
 	}
 
 	flipBoard() {
@@ -198,6 +201,35 @@ class RoomState {
 		this._toastTimeout = setTimeout(() => {
 			this.toastVisible = false;
 		}, 2500);
+	}
+	
+	persistSession() {
+		if (!this.code || this.role === 'local') return;
+		localStorage.setItem('flux_last_room', JSON.stringify({
+			code: this.code,
+			role: this.role,
+			timestamp: Date.now()
+		}));
+	}
+
+	clearSession() {
+		localStorage.removeItem('flux_last_room');
+	}
+
+	getStoredSession() {
+		try {
+			const stored = localStorage.getItem('flux_last_room');
+			if (!stored) return null;
+			const session = JSON.parse(stored);
+			// Expire after 24 hours
+			if (Date.now() - session.timestamp > 86400000) {
+				this.clearSession();
+				return null;
+			}
+			return session;
+		} catch {
+			return null;
+		}
 	}
 }
 
