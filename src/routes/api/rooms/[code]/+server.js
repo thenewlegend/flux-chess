@@ -17,7 +17,7 @@ export async function GET({ params, locals }) {
 		return json({ error: 'Room not found' }, { status: 404 });
 	}
 
-	let currentUserRole = 'spectator';
+	let currentUserRole = 'none';
 	if (data.host_player_id === playerId) currentUserRole = 'host';
 	else if (data.guest_player_id === playerId) currentUserRole = 'guest';
 

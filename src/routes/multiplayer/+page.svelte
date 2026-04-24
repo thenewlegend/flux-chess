@@ -37,7 +37,7 @@
 				gameState.popupShown = true;
 				setTimeout(() => { restartPopup = true; }, 400);
 			} else {
-				// Guest or spectator, show popup without options
+				// Guest, show popup without options
 				gameState.popupShown = true;
 				setTimeout(() => { restartPopup = true; }, 400);
 			}
@@ -178,7 +178,7 @@
 <!-- Restart Popup -->
 <Modal open={restartPopup} title="Game Ended" onclose={closePopup}>
 	<p class="endgame-status">{gameState.statusText}</p>
-	{#if roomState.role === 'guest' || roomState.isSpectator}
+	{#if roomState.role === 'guest'}
 		<p>Waiting for host to restart...</p>
 	{:else}
 		<p>Restart now?</p>

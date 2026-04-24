@@ -8,7 +8,7 @@ import { gameState } from '$lib/stores/game.svelte.js';
 class RoomState {
 	/** @type {string|null} */
 	code = $state(null);
-	/** @type {'local'|'host'|'guest'|'spectator'} */
+	/** @type {'local'|'host'|'guest'|'none'} */
 	role = $state('local');
 	/** @type {'w'|'b'} */
 	hostColor = $state('w');
@@ -24,8 +24,7 @@ class RoomState {
 
 	get isOnline() { return this.role !== 'local'; }
 	get isHost() { return this.role === 'host'; }
-	get isSpectator() { return this.role === 'spectator'; }
-	get canMove() { return this.role !== 'spectator'; }
+	get canMove() { return this.role === 'local' || this.role === 'host' || this.role === 'guest'; }
 
 	/** Get this player's color */
 	get myColor() {
@@ -70,7 +69,6 @@ class RoomState {
 
 	/** Pick a role and enter the game */
 	async enterWithRole(role) {
-		// If two players exist and this isn't spectator, force spectator
 		const res = await fetch(`/api/rooms/${this.code}/join`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
@@ -79,12 +77,7 @@ class RoomState {
 
 		if (!res.ok) {
 			const err = await res.json().catch(() => ({}));
-			// If forced to spectator
-			if (err.forcedRole === 'spectator') {
-				this.role = 'spectator';
-			} else {
-				throw new Error(err.error || 'Failed to join');
-			}
+			throw new Error(err.error || 'Failed to join');
 		} else {
 			const data = await res.json();
 			this.role = data.role;
@@ -141,6 +134,19 @@ class RoomState {
 
 		this.channel = supabaseClient.channel(`room_${this.code}`);
 
+		// Listen for broadcast events (e.g. player joined)
+		this.channel.on(
+			'broadcast',
+			{ event: 'player_joined' },
+			(payload) => {
+				// Don't toast for ourselves if we sent it
+				if (payload.payload.role !== this.role) {
+					const roleName = payload.payload.role === 'host' ? 'Host' : 'Guest';
+					this.showToast(`${roleName} has joined the room`);
+				}
+			}
+		);
+
 		// Listen for DB state changes
 		this.channel.on(
 			'postgres_changes',
@@ -176,7 +182,15 @@ class RoomState {
 			}
 		);
 
-		this.channel.subscribe();
+		this.channel.subscribe((status) => {
+			if (status === 'SUBSCRIBED' && this.isOnline) {
+				this.channel.send({
+					type: 'broadcast',
+					event: 'player_joined',
+					payload: { role: this.role }
+				});
+			}
+		});
 	}
 
 	/** Clean up */

@@ -12,11 +12,6 @@
 	const currentUserRole = $derived(roomData?.currentUserRole);
 
 	async function selectRole(role) {
-		// If both players exist and role is not spectator, force spectator
-		// UNLESS the user is rejoining their own role
-		if (hasHost && hasGuest && role !== 'spectator' && currentUserRole !== role) {
-			role = 'spectator';
-		}
 
 		try {
 			// Load game state
@@ -27,6 +22,7 @@
 			onSelected?.();
 		} catch (e) {
 			console.error('Failed to join:', e);
+			roomState.showToast(e.message || 'Failed to join');
 		}
 	}
 </script>
@@ -55,13 +51,6 @@
 				</div>
 			</button>
 
-			<button class="role-card spectator" onclick={() => selectRole('spectator')}>
-				<span class="material-symbols-rounded">visibility</span>
-				<div class="role-details">
-					<span class="role-name">SPECTATOR</span>
-					<span class="role-color">Watch Only</span>
-				</div>
-			</button>
 		</div>
 	</div>
 
@@ -134,8 +123,6 @@
 
 	.role-card.host { border-left: 4px solid var(--md-sys-color-primary); }
 	.role-card.guest { border-left: 4px solid var(--md-sys-color-on-secondary-container); }
-	.role-card.spectator { opacity: 0.8; }
-	.role-card.spectator:hover:not(:disabled) { opacity: 1; }
 
 	.back-btn { margin-top: 0; width: 100%; }
 </style>

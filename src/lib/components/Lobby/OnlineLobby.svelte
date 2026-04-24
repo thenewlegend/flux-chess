@@ -21,13 +21,11 @@
 			verifyingSession = true;
 			try {
 				const data = await roomState.joinRoom(session.code);
-				console.log('[Lobby] Room data keys:', Object.keys(data));
-				console.log('[Lobby] currentUserRole from server:', data.currentUserRole);
-				
-				const canRejoin = (data.currentUserRole === session.role) || (session.role === 'spectator');
+				const canRejoin = (data.currentUserRole === session.role) && (data.currentUserRole !== 'none');
 				
 				if (canRejoin) {
 					discoveredSession = { ...session, data };
+					await handleRejoin();
 				} else {
 					console.warn('[Lobby] Role mismatch or room full. Stored:', session.role, 'Server:', data.currentUserRole);
 					roomState.clearSession();
@@ -111,22 +109,7 @@
 </script>
 
 <div class="lobby-menu" style="animation: introReveal 0.4s ease forwards;">
-	{#if discoveredSession}
-		<div class="rejoin-card">
-			<div class="rejoin-info">
-				<span class="material-symbols-rounded">history</span>
-				<div class="rejoin-text">
-					<span class="rejoin-title">Active Match Found</span>
-					<span class="rejoin-subtitle">Room {discoveredSession.code} • {discoveredSession.role.toUpperCase()}</span>
-				</div>
-			</div>
-			<div class="rejoin-actions">
-				<button class="btn text-btn sm" onclick={handleDismissSession}>Dismiss</button>
-				<button class="btn filled sm" onclick={handleRejoin}>Rejoin</button>
-			</div>
-		</div>
-		<div class="lobby-divider rejoin-divider">OR</div>
-	{/if}
+
 
 	{#if verifyingSession}
 		<div class="verifying-session">
