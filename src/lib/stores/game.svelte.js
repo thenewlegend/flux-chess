@@ -227,7 +227,7 @@ class GameState {
 
 		if (this.isCheckmate || this.isDraw || move.captured === 'k') {
 			playEndSound();
-		} else {
+		} else if (!this.isCheck) {
 			playMoveSound(!!move.captured);
 			if (move.captured) vibrateCapture();
 			else vibrateMove();
