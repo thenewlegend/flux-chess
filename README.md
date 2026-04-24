@@ -6,7 +6,8 @@ A modern, fast, and feature-rich real-time multiplayer chess application built w
 
 ## Preview
 
-<!-- Add image / GIF of the gameplay here -->
+<img width="1579" height="729" alt="{8DB5C5F2-A9D6-4621-8C59-9B3172000A51}" src="https://github.com/user-attachments/assets/6239900b-ab21-4f74-aca1-79d688322ec9" />
+
 
 ---
 
