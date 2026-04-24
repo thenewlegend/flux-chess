@@ -124,6 +124,20 @@ class RoomState {
 		});
 	}
 
+	/** Terminate the room (host only) */
+	async terminateRoom() {
+		if (!this.code || !this.isHost) return;
+		const res = await fetch(`/api/rooms/${this.code}`, {
+			method: 'DELETE'
+		});
+		if (res.ok) {
+			this.disconnect();
+			// Navigate to main menu - this should be handled by the component
+			return true;
+		}
+		return false;
+	}
+
 	/** Subscribe to Realtime updates for the room */
 	_subscribeRealtime() {
 		if (!this.code) return;
@@ -151,12 +165,18 @@ class RoomState {
 		this.channel.on(
 			'postgres_changes',
 			{
-				event: 'UPDATE',
+				event: '*', // Listen for ALL events including DELETE
 				schema: 'public',
 				table: 'rooms',
 				filter: `code=eq.${this.code}`
 			},
 			(payload) => {
+				if (payload.eventType === 'DELETE') {
+					this.showToast('Room terminated by host');
+					setTimeout(() => this.disconnect(), 1500);
+					return;
+				}
+
 				if (payload.new?.game_state) {
 					const state = payload.new.game_state;
 					this.hostColor = state.hostColor || this.hostColor;

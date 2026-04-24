@@ -25,6 +25,12 @@
 		}
 	}
 
+	async function handleTerminate() {
+		if (confirm('Terminate room and end session for everyone?')) {
+			await roomState.terminateRoom();
+		}
+	}
+
 	function handleFlip() {
 		roomState.flipBoard();
 		playFlipSound();
@@ -33,7 +39,6 @@
 	const canRestart = $derived(roomState.role === 'local' || roomState.isHost);
 	const canResign = $derived(
 		gameState.gameActive &&
-		!roomState.isSpectator &&
 		(roomState.role === 'local' || roomState.isMyTurn)
 	);
 </script>
@@ -53,6 +58,15 @@
 	<button class="btn tonal" onclick={handleFlip} title="Flip Board">
 		<span class="material-symbols-rounded">flip</span> Flip
 	</button>
+
+	{#if roomState.isHost}
+		<button class="btn tonal" onclick={handleTerminate} 
+			style="color: var(--md-sys-color-error); border-color: var(--md-sys-color-error-container)"
+			title="Terminate Room (Host Only)"
+		>
+			<span class="material-symbols-rounded">cancel</span> Terminate
+		</button>
+	{/if}
 
 	{#if roomState.role === 'local'}
 		<button 

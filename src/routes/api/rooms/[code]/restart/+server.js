@@ -40,7 +40,8 @@ export async function POST({ params, locals }) {
 		portalPairs,
 		hostColor: newHostColor,
 		gameActive: true,
-		statusText: 'White to move.'
+		statusText: 'White to move.',
+		lastMove: null
 	};
 
 	await supabase.from('rooms').update({

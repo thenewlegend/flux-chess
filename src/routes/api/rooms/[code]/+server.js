@@ -32,3 +32,37 @@ export async function GET({ params, locals }) {
 		currentUserRole
 	});
 }
+
+/** DELETE /api/rooms/[code] — Terminate room (Host only) */
+export async function DELETE({ params, locals }) {
+	const { code } = params;
+	const playerId = locals.playerId;
+
+	// Verify room exists and requester is the host
+	const { data: room, error } = await supabase
+		.from('rooms')
+		.select('id, host_player_id')
+		.eq('code', code.toUpperCase())
+		.eq('is_active', true)
+		.single();
+
+	if (error || !room) {
+		return json({ error: 'Room not found' }, { status: 404 });
+	}
+
+	if (room.host_player_id !== playerId) {
+		return json({ error: 'Only the host can terminate the room' }, { status: 403 });
+	}
+
+	// Soft delete or hard delete? Let's go with hard delete as requested
+	const { error: deleteError } = await supabase
+		.from('rooms')
+		.delete()
+		.eq('id', room.id);
+
+	if (deleteError) {
+		return json({ error: 'Failed to terminate room' }, { status: 500 });
+	}
+
+	return json({ success: true });
+}

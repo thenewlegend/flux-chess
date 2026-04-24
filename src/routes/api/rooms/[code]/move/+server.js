@@ -112,7 +112,8 @@ export async function POST({ params, locals, request }) {
 		movesUntilSwap,
 		swapInterval,
 		gameActive,
-		statusText
+		statusText,
+		lastMove: { from, to }
 	};
 
 	const { error: updateError } = await supabase

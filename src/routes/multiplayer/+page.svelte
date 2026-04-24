@@ -44,6 +44,14 @@
 		}
 	});
 
+	// Watch for room disconnection (termination)
+	$effect(() => {
+		if (screen === 'game' && !roomState.code) {
+			screen = 'splash';
+			lobbyView = 'online';
+		}
+	});
+
 	function backToMain() {
 		goto('/');
 	}
