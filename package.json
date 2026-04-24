@@ -27,5 +27,8 @@
 		"@supabase/supabase-js": "^2.104.1",
 		"@sveltejs/adapter-vercel": "^6.3.3",
 		"chess.js": "^1.4.0"
+	},
+	"overrides": {
+		"vite": "$vite"
 	}
 }
