@@ -1,42 +1,124 @@
-# sv
+# Flux Chess
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+A modern, fast, and feature-rich real-time multiplayer chess application built with SvelteKit and Supabase.
 
-## Creating a project
+---
 
-If you're seeing this, you've probably already done this step. Congrats!
+## Preview
 
-```sh
-# create a new project
-npx sv create my-app
+<!-- Add image / GIF of the gameplay here -->
+
+---
+
+## Features
+
+* **Real-time Multiplayer**: Seamless online play powered by Supabase.
+* **Local Play**: Play against a friend locally with an auto-flip board setting.
+* **PWA Support**: Installable as a Progressive Web App for an app-like experience.
+* **Modern UI**: Built with a premium aesthetic and sleek animations using Svelte 5.
+* **Robust Chess Logic**: Move validation and state management handled reliably via `chess.js`.
+
+---
+
+## Rules
+
+### Setup
+
+* Follows standard FIDE chess rules.
+* Players can create a multiplayer room and share the link/code or play locally.
+
+### Gameplay
+
+* All standard moves are supported including En Passant, Castling, and Pawn Promotion (with custom styled dialogs).
+
+### Win Conditions
+
+* Checkmate
+* Resignation
+* Draw by stalemate, insufficient material, or 50-move rule.
+
+---
+
+## Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/your-username/flux-chess.git
+
+# Navigate to project
+cd flux-chess
+
+# Install dependencies
+npm install
 ```
 
-To recreate this project with the same configuration:
+---
 
-```sh
-# recreate this project
-npx sv@0.15.1 create --template minimal --types jsdoc --install npm ./
-```
+## Usage
 
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
+```bash
+# Start the development server
 npm run dev
 
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
-
-## Building
-
-To create a production version of your app:
-
-```sh
+# Or build for production
 npm run build
+npm run preview
 ```
 
-You can preview the production build with `npm run preview`.
+---
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+## Configuration (Optional)
+
+* **Supabase setup**: To use the multiplayer functionality, ensure you have configured your environment variables (e.g., in a `.env` file) with `PUBLIC_SUPABASE_URL` and `PUBLIC_SUPABASE_ANON_KEY`.
+
+---
+
+## Tech Stack
+
+* **Frontend**: [SvelteKit](https://kit.svelte.dev/) (Svelte 5)
+* **Backend/Multiplayer**: [Supabase](https://supabase.com/) (Database & Real-time WebSockets)
+* **Game Engine**: [chess.js](https://github.com/jhlywa/chess.js) (Chess logic & move validation)
+* **PWA**: [Vite PWA](https://vite-pwa-org.netlify.app/)
+
+---
+
+## Project Structure
+
+```text
+flux-chess/
+ ├── src/
+ │   ├── lib/
+ │   │   └── components/  # UI components (e.g., Board, Lobby, ChatBox)
+ │   ├── routes/          # SvelteKit pages (/local, /multiplayer)
+ │   └── app.html         # Main HTML entry point
+ ├── static/              # Static assets (PWA icons, etc.)
+ ├── package.json
+ └── svelte.config.js
+```
+
+---
+
+## Core Logic
+
+* **Multiplayer Sync**: Real-time Supabase subscriptions synchronize the board state and chat between host and guest.
+* **Session Management**: Persistent player sessions that allow re-entry into ongoing matches without losing progress.
+
+---
+
+## Roadmap
+
+* Implement AI opponent for single-player mode.
+* Implement spectator mode for ongoing matches.
+* Global leaderboards and user profiles.
+
+---
+
+## Contributing
+
+Contributions are welcome! Please open an issue or submit a pull request for any new features, UI enhancements, or bug fixes.
+
+---
+
+## License
+
+CC NC (Creative Commons Non-Commercial)
