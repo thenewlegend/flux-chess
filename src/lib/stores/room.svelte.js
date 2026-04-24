@@ -127,12 +127,21 @@ class RoomState {
 	/** Terminate the room (host only) */
 	async terminateRoom() {
 		if (!this.code || !this.isHost) return;
+
+		// Broadcast termination to guest immediately
+		if (this.channel) {
+			await this.channel.send({
+				type: 'broadcast',
+				event: 'room_terminated',
+				payload: {}
+			});
+		}
+
 		const res = await fetch(`/api/rooms/${this.code}`, {
 			method: 'DELETE'
 		});
 		if (res.ok) {
 			this.disconnect();
-			// Navigate to main menu - this should be handled by the component
 			return true;
 		}
 		return false;
@@ -148,15 +157,31 @@ class RoomState {
 
 		this.channel = supabaseClient.channel(`room_${this.code}`);
 
-		// Listen for broadcast events (e.g. player joined)
+		// Listen for broadcast events
 		this.channel.on(
 			'broadcast',
 			{ event: 'player_joined' },
 			(payload) => {
-				// Don't toast for ourselves if we sent it
 				if (payload.payload.role !== this.role) {
 					const roleName = payload.payload.role === 'host' ? 'Host' : 'Guest';
 					this.showToast(`${roleName} has joined the room`);
+				}
+			}
+		).on(
+			'broadcast',
+			{ event: 'room_terminated' },
+			() => {
+				this.showToast('Room terminated by host');
+				gameState.gameActive = false; // Stop any more moves
+				setTimeout(() => this.disconnect(), 3000);
+			}
+		).on(
+			'broadcast',
+			{ event: 'player_left' },
+			(payload) => {
+				if (payload.payload.role !== this.role) {
+					const roleName = payload.payload.role === 'host' ? 'Host' : 'Guest';
+					this.showToast(`${roleName} has left the room`);
 				}
 			}
 		);
@@ -220,8 +245,14 @@ class RoomState {
 	}
 
 	/** Exit mid-game but keep session for re-join */
-	exit() {
+	async exit() {
 		if (this.channel) {
+			// Notify others before leaving
+			await this.channel.send({
+				type: 'broadcast',
+				event: 'player_left',
+				payload: { role: this.role }
+			});
 			supabaseClient.removeChannel(this.channel);
 			this.channel = null;
 		}
