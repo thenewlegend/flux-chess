@@ -5,6 +5,7 @@
 	import Toast from '$lib/components/Toast.svelte';
 	import Modal from '$lib/components/Modal.svelte';
 	import { theme } from '$lib/stores/theme.svelte.js';
+	import PWAInstall from '$lib/components/PWAInstall.svelte';
 	import { onMount } from 'svelte';
 
 	let { children } = $props();
@@ -26,6 +27,7 @@
 {@render children()}
 
 <Toast />
+<PWAInstall />
 
 <!-- Tutorial Modal -->
 <Modal open={tutorialOpen} title="How to Play" onclose={() => { tutorialOpen = false; }}>
