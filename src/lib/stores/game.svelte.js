@@ -20,6 +20,8 @@ class GameState {
 	popupShown = $state(false);
 	selectedSquare = $state(null);
 	autoFlip = $state(false);
+	/** @type {{from: string, to: string}|null} */
+	lastMove = $state(null);
 	/** @type {Array<{square: string, type: 'move'|'capture'|'danger'}>} */
 	highlights = $state([]);
 
@@ -221,6 +223,7 @@ class GameState {
 		}
 
 		if (!move) return null;
+		this.lastMove = { from, to };
 
 		if (this.isCheckmate || this.isDraw || move.captured === 'k') {
 			playEndSound();
@@ -300,6 +303,7 @@ class GameState {
 		this.movesUntilSwap = this.swapInterval;
 		this.portalPairs = generatePortalPairs();
 		this.statusText = 'White to move.';
+		this.lastMove = null;
 		this.clearSelection();
 	}
 
@@ -315,6 +319,7 @@ class GameState {
 		if (data.movesUntilSwap !== undefined) this.movesUntilSwap = data.movesUntilSwap;
 		if (data.swapInterval !== undefined) this.swapInterval = data.swapInterval;
 		if (data.portalPairs) this.portalPairs = data.portalPairs;
+		if (data.lastMove !== undefined) this.lastMove = data.lastMove;
 		if (data.gameActive !== undefined) this.gameActive = data.gameActive;
 		if (data.statusText) this.statusText = data.statusText;
 		this.clearSelection();
@@ -327,6 +332,7 @@ class GameState {
 			movesUntilSwap: this.movesUntilSwap,
 			swapInterval: this.swapInterval,
 			portalPairs: this.portalPairs,
+			lastMove: this.lastMove,
 			gameActive: this.gameActive,
 			statusText: this.statusText
 		};
