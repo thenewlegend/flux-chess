@@ -2,7 +2,7 @@
 	import { roomState } from '$lib/stores/room.svelte.js';
 	import { onMount } from 'svelte';
 
-	let { onBack, onRoomCreated, onRoomJoined } = $props();
+	let { onBack, onRoomCreated, onRoomJoined, onRejoinComplete } = $props();
 
 	let joinCode = $state('');
 	let joinError = $state('');
@@ -53,7 +53,11 @@
 				gameState.loadState(discoveredSession.data.game_state);
 			}
 			await roomState.enterWithRole(discoveredSession.role);
-			onRoomJoined?.(discoveredSession.code, discoveredSession.data);
+			if (onRejoinComplete) {
+				onRejoinComplete();
+			} else {
+				onRoomJoined?.(discoveredSession.code, discoveredSession.data);
+			}
 		} catch (e) {
 			console.error('[Lobby] Rejoin failed:', e);
 			joinError = 'Failed to rejoin session.';

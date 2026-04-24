@@ -13,7 +13,8 @@
 
 	async function selectRole(role) {
 		// If both players exist and role is not spectator, force spectator
-		if (hasHost && hasGuest && role !== 'spectator') {
+		// UNLESS the user is rejoining their own role
+		if (hasHost && hasGuest && role !== 'spectator' && currentUserRole !== role) {
 			role = 'spectator';
 		}
 

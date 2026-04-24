@@ -129,6 +129,7 @@
 					onBack={backToMain}
 					onRoomCreated={onRoomCreated}
 					onRoomJoined={onRoomJoined}
+					onRejoinComplete={() => { screen = 'game'; }}
 				/>
 			{:else if lobbyView === 'roles'}
 				<RoleSelection
